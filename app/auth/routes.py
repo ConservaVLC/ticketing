@@ -25,37 +25,50 @@ from sqlalchemy import or_
 
 logger = logging.getLogger(__name__)
 
+# Importar los repositorios
+from app.repositories import SQLUserRepository, SQLRoleRepository
+
+# Crear instancias de los repositorios
+user_repository = SQLUserRepository()
+role_repository = SQLRoleRepository()
+
 # ------------------------------------------------------------------------------
-#               FUNCIÓN: REGISTRAR UN USUARIO
+#               FUNCIÓN: REGISTRAR UN USUARIO (SOLO ADMINS)
 # ------------------------------------------------------------------------------
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@login_required
+@admin_required
 def register():
-  
     form = RegistrationForm()
     
-    roles = Role.query.order_by(Role.name).all()
+    roles = role_repository.get_all_ordered_by_name()
     role_choices = [(r.id, r.name) for r in roles]
     form.role.choices = [('', '--- Seleccione una opción ---')] + role_choices
 
     if form.validate_on_submit():
-        
         user = Persona(
-            
             username=form.username.data, 
             email=form.email.data, 
             name=form.name.data,
             firstSurname=form.firstSurname.data,
             middleName = form.middleName.data,
             secondSurname=form.secondSurname.data,
-            role_id=form.role.data)
-        
+            role_id=form.role.data
+        )
         user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        # --- Logger: INFO - Usuario registrado ---
-        logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) ha creado un nuevo usuario: Usuario: {user.username} (ID: {user.id})')
-        flash('Usuario registrado con éxito', 'success')
-        return redirect(url_for('auth.login'))
+        
+        try:
+            user_repository.add(user)
+            db.session.commit()
+            
+            # Ahora el logger es correcto, porque current_user es un admin
+            logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) ha creado un nuevo usuario: {user.username}')
+            flash('Usuario registrado con éxito', 'success')
+            return redirect(url_for('auth.list_users')) # Redirigir a la lista de usuarios
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logger.error(f"Error en la base de datos al registrar al usuario {form.username.data}: {e}", exc_info=True)
+            flash('Error al registrar el usuario.', 'danger')
     
     return render_template('register.html', form=form)
 
@@ -68,40 +81,25 @@ def login():
         return redirect(url_for('main.home'))
     form = LoginForm()
     if form.validate_on_submit():
-
         try:
-            user = Persona.query.filter(or_(Persona.username == form.username.data,
-                                        Persona.email == form.username.data)).first()      
+            user = user_repository.find_by_username_or_email(form.username.data)
         except SQLAlchemyError as e:
-            # --- Logger: INFO - Error en base de datos ---
-            logger.error(f"Error en la base de datos al intentar inicio de sesión'{form.username.data}': {e}", exc_info=True)
+            logger.error(f"Error en la base de datos al intentar inicio de sesión '{form.username.data}': {e}", exc_info=True)
             flash('Lo sentimos, no pudimos procesar tu solicitud en este momento. Inténtalo de nuevo más tarde.', 'danger')
             return redirect(url_for('auth.login'))
         
-        except Exception as e:
-            # --- Logger: INFO - Error inesperado ---
-            logger.error(f"Error insesperado al intentar iniciar sesión con el usuario '{form.username.data}': {e}", exc_info=True)
-            flash('Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        if user is None:
-            # --- Logger: WARNING - Usuario no encontrado ---
-            logger.warning(f"Intento de inicio de sesión fallido: user/email '{form.username.data}' no encontrado")
+        # La comprobación de la contraseña y si el usuario existe se hace en un solo bloque
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            logger.info(f"Usuario {user.username} ha iniciado sesión exitosamente desde IP: {request.remote_addr}")
+            flash(f'¡Bienvenido de nuevo, {user.username}!', 'success')
+            return redirect(url_for('main.home'))
+        else:
+            # Un solo mensaje de error para no dar pistas a posibles atacantes
+            logger.warning(f"Intento de inicio de sesión fallido para usuario/email '{form.username.data}'")
             flash('Nombre de usuario/correo electrónico o contraseña inválidos', 'danger')
             return redirect(url_for('auth.login'))
-        
-        if not user.check_password(form.password.data): # <-- Clave 2
-            flash('Nombre de usuario/correo electrónico o contraseña inválidos', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        # Pasa el valor de 'remember_me' a login_user
-        login_user(user, remember=form.remember_me.data)
-        
-        # --- Logger: INFO - Inicio de sesión exitoso ---
-        logger.info(f"Usuario {user.username} ha iniciado sesión exitosamente desde IP: {request.remote_addr}")
-        flash(f'¡Bienvenido de nuevo, {user.username}!', 'success')
-        
-        return redirect(url_for('main.home'))
+
     return render_template('login.html', form=form)
 
 # ------------------------------------------------------------------------------
@@ -121,17 +119,17 @@ def request_password_reset():
     
     form = RequestResetPasswordForm()
     if form.validate_on_submit():
-        user = Persona.query.filter_by(email=form.email.data).first()
+        user = user_repository.find_by_email(form.email.data)
         if user:
             # --- Logger: INFO - Solicitud de recuperación de contraseña ---
             logger.info(f"Usuario {user.username} ha solicitado recuperación de contraseña a través de Token")
             send_password_reset_email(user)
-            flash('Se ha enviado un correo electrónico con instrucciones para restablecer tu contraseña.', 'info')
         else:
             # --- Logger: WARNING - Solicitud de recuperación de contraseña por Token en usuario no autorizado ---
             logger.warning(f"Solicitud de recuperación de contraseña para usuario/email no existente desde IP: {request.remote_addr}")
-            # Por seguridad, no decimos si el email no existe, damos el mismo mensaje.
-            flash('Se ha enviado un correo electrónico con instrucciones para restablecer tu contraseña.', 'info')
+        
+        # Por seguridad, no decimos si el email no existe, damos el mismo mensaje.
+        flash('Se ha enviado un correo electrónico con instrucciones para restablecer tu contraseña.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('request_password_reset.html', title='Restablecer Contraseña', form=form)
 
@@ -146,19 +144,24 @@ def reset_password(token):
     user = Persona.verify_reset_password_token(token)
     if not user:
         # --- Logger: WARNING - Token de recuperación de contraseña incorrecto ---
-        logger.warning(f"Se he intentado utilizar un Token incorrecto para recuperar la contraseña del usuario {user.username} desde IP: {request.remote_addr}")
+        logger.warning(f"Se ha intentado utilizar un Token incorrecto o expirado para recuperar una contraseña desde IP: {request.remote_addr}")
         flash('El enlace de restablecimiento de contraseña no es válido o ha expirado.', 'danger')
         return redirect(url_for('auth.request_password_reset'))
     
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user.set_password(form.password.data)
-        db.session.commit()
-        # --- Logger: INFO - Contraseña recuperada con éxito median Token ---
-        logger.info(f"Usuario {user.username} ha recuperado su contraseña correctamente mediante Token")
-        flash('Tu contraseña ha sido restablecida. Ya puedes iniciar sesión.', 'success')
-        return redirect(url_for('auth.login'))
-    
+        try:
+            user.set_password(form.password.data)
+            db.session.commit()
+            # --- Logger: INFO - Contraseña recuperada con éxito median Token ---
+            logger.info(f"Usuario {user.username} ha recuperado su contraseña correctamente mediante Token")
+            flash('Tu contraseña ha sido restablecida. Ya puedes iniciar sesión.', 'success')
+            return redirect(url_for('auth.login'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logger.error(f"Error de BBDD al resetear la contraseña para el usuario {user.username}: {e}", exc_info=True)
+            flash('Ocurrió un error al restablecer tu contraseña.', 'danger')
+
     return render_template('reset_password.html', title='Restablecer Contraseña', form=form)
 
 # ------------------------------------------------------------------------------
@@ -183,8 +186,8 @@ def edit_profile():
             # El rol NO se modifica aquí, ya que esta vista es para que el usuario
             # edite sus propios datos personales, no su nivel de privilegio.
             
-            db.session.add(current_user) # Añade el objeto actualizado a la sesión
-            db.session.commit() # Guarda los cambios en la base de datos
+            user_repository.add(current_user) # El repositorio añade a la sesión
+            db.session.commit()               # La ruta guarda la sesión
             
             # --- Logger: INFO - Perfil actualizado correctamente ---
             logger.info(f"Usuario {current_user.username} ha actualizado su perfil correctamente")
@@ -221,7 +224,7 @@ def change_password():
         else:
             try:
                 current_user.set_password(form.new_password.data)
-                db.session.add(current_user)
+                user_repository.add(current_user)
                 db.session.commit()
 
                 # --- Logger: INFO - Contraseña recuperada con éxito ---
@@ -253,7 +256,7 @@ def change_password():
 @login_required
 @admin_required
 def list_users():
-    personas = db.session.execute(db.select(Persona).order_by(Persona.firstSurname.desc())).scalars().all()
+    personas = user_repository.get_all()
     # --- Logger: INFO - Consulta de tickets exitosa ---
     logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó el listado de usuarios. Se encontraron {len(personas)} usuarios.')
     
@@ -266,7 +269,7 @@ def list_users():
 @login_required
 @admin_required
 def edit_user(user_id):
-    user = db.session.execute(select(Persona).filter_by(id=user_id)).scalar_one_or_none()
+    user = user_repository.find_by_id(user_id)
 
     if not user:
         flash('Usuario no encontrado.', 'danger')
@@ -274,7 +277,7 @@ def edit_user(user_id):
 
     form = UserEditForm(original_username=user.username, original_email=user.email, obj=user)
 
-    roles = Role.query.order_by(Role.name).all()
+    roles = role_repository.get_all_ordered_by_name()
     role_choices = [(r.id, r.name) for r in roles]
     form.role.choices = [('', '--- Seleccione una opción ---')] + role_choices
 
@@ -291,7 +294,7 @@ def edit_user(user_id):
             if form.password.data:
                 user.password_hash = generate_password_hash(form.password.data)
             
-            db.session.add(user)
+            user_repository.add(user)
             db.session.commit()
             
             # --- Logger: INFO - Admin/Supervisor modifica exitosamente perfil de otro usuario ---

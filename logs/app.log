@@ -2237,3 +2237,24 @@ sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (2003, "Can't co
 2025-09-03 14:16:41,525 - app.auth.routes - INFO - Usuario admin (ID: 1) consultó el listado de usuarios. Se encontraron 6 usuarios.
 2025-09-03 14:16:48,281 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha solicitado recuperación de contraseña a través de Token
 2025-09-03 14:18:29,307 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha recuperado su contraseña correctamente mediante Token
+2025-09-03 14:35:28,997 - app.auth.routes - INFO - Usuario admin ha iniciado sesión exitosamente desde IP: 127.0.0.1
+2025-09-03 14:36:34,157 - app.auth.routes - INFO - Usuario admin (ID: 1) ha creado un nuevo usuario: cliente03@algoayto.com
+2025-09-03 14:36:34,184 - app.auth.routes - INFO - Usuario admin (ID: 1) consultó el listado de usuarios. Se encontraron 7 usuarios.
+2025-09-03 14:38:01,809 - app.auth.routes - INFO - Usuario cliente01@algoayto.com ha iniciado sesión exitosamente desde IP: 127.0.0.1
+2025-09-03 14:38:46,778 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha iniciado sesión exitosamente desde IP: 127.0.0.1
+2025-09-03 14:39:02,655 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha iniciado sesión exitosamente desde IP: 127.0.0.1
+2025-09-03 14:39:19,763 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha actualizado su perfil correctamente
+2025-09-03 14:39:53,733 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha modificado su contraseña correctamente
+2025-09-03 14:40:09,363 - app.auth.routes - WARNING - Intento de inicio de sesión fallido para usuario/email 'lrguardamagna.etra@grupoetra.com'
+2025-09-03 14:40:14,899 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha iniciado sesión exitosamente desde IP: 127.0.0.1
+2025-09-03 14:40:50,721 - app.auth.routes - WARNING - Usuario lrguardamagna.etra@grupoetra.com ha proporcionado una contraseña actual incorrecta al intentar modificar su contraseña
+2025-09-03 14:41:04,280 - app.auth.routes - WARNING - Usuario lrguardamagna.etra@grupoetra.com ha proporcionado una contraseña actual incorrecta al intentar modificar su contraseña
+2025-09-03 14:41:15,175 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha modificado su contraseña correctamente
+2025-09-03 14:45:14,677 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha iniciado sesión exitosamente desde IP: 127.0.0.1
+2025-09-03 14:45:23,465 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com (ID: 6) consultó el listado de usuarios. Se encontraron 7 usuarios.
+2025-09-03 14:45:38,057 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com ha modificado correctamente el perfil del usuario cliente03@algoayto.com
+2025-09-03 14:45:38,100 - app.auth.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com (ID: 6) consultó el listado de usuarios. Se encontraron 7 usuarios.
+2025-09-03 14:46:05,394 - app.admin.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com (ID: 6) cambió la categoría "General1" por "general1".
+2025-09-03 14:46:11,785 - app.admin.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com (ID: 6) cambió la categoría "General" por "general".
+2025-09-03 14:46:17,316 - app.admin.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com (ID: 6) creó la categoría test.
+2025-09-03 14:46:20,814 - app.admin.routes - INFO - Usuario lrguardamagna.etra@grupoetra.com (ID: 6) borró la categoría "test".

@@ -65,4 +65,4 @@ jobs:
           region: ${{ env.GCP_REGION }}
           image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.CLOUD_RUN_SERVICE_NAME }}:${{ github.sha }}
           platform: "managed"
-          allow-unauthenticated: true # Cambia a false si requieres autenticación
+          allow-unauthenticated: true # Cambiar a false si requieres autenticación

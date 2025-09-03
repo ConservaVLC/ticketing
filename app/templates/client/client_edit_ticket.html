@@ -1,0 +1,60 @@
+{# templates/tickets/client_add_description.html #}
+{% extends 'base.html' %}
+
+{% block title %}Agregar Nota al Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<div class="container col-md-8">
+    <div class="row">
+        <div>
+            <h1>Agregar Nota al Ticket #{{ ticket.id }}</h1>
+            <p><strong>Estado Actual: <span style="color: black;">{{ ticket.status_obj.name if ticket.status_obj else 'Desconocido' }}</span></p></strong>
+            <p><strong>Título: <span style="color: black;">{{ ticket.title }}</span></p></strong>
+            <p><strong>Supervisor asignado: <span style="color: black;">{{ ticket.asignated_supervisor_obj.username if ticket.asignated_supervisor_obj else 'Sin asignar'  }}</span></p></strong>
+            <p><strong>Operador asignado: <span style="color: black;">{{ ticket.asigned_operator_obj.username if ticket.asigned_operator_obj else 'Sin asignar'  }}</span></p></strong>
+            <p><strong>Fecha de creación: <span style="color: black;">{{ ticket.timestamp.strftime('%d/%m/%Y %H:%M') }}</span></p></strong>
+            <p><strong>Descripción:</strong></p>
+            <div class="alert alert-light border" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">{{ ticket.description }}</div> {# Añadí max-height y overflow-y para descripciones largas #}
+            <hr>
+
+            {# Mensaje de advertencia si el ticket no es editable #}
+            {% if not is_ticket_editable_by_client %}
+                <div class="alert alert-warning" role="alert">
+                    Este ticket está **{{ ticket.status_obj.name if ticket.status_obj else 'finalizado' }}** y no se pueden agregar más notas.
+                </div>
+            {% endif %}
+            
+            <div class="d-flex justify-content-center">
+                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket.id) }}" class="btn btn-outline-secondary col-md-10 align-items-center">
+                        <i class="fas fa-history"></i> Ver Historial
+                </a>
+            </div>
+
+            <h2>Agregar Nueva Nota</h2>
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+
+                {# Campo para agregar nueva descripción/notas (deshabilitado/no es editable) #}
+                <div class="form-group">
+                    {{ form.new_description_text.label(class="form-label") }}
+                    {{ form.new_description_text(class="form-control", rows=7, disabled=not is_ticket_editable_by_client) }} {# <--- AQUÍ #}
+                    {% if form.new_description_text.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.new_description_text.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {# Botón de submit (deshabilitado si no es editable) #}
+                    {{ form.submit(disabled=not is_ticket_editable_by_client) }}
+                </div>
+            </form>
+            
+            <hr>
+            <a href="{{ url_for('client_bp.client_tickets') }}" class="btn btn-secondary mt-3">Volver a mis tickets</a>
+        </div>
+    </div>
+{% endblock %}

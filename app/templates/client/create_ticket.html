@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %} Crear ticket {% endblock %}
+
+{% block content %}
+    <div class="container col-md-6">
+        <h1 class="my-4">Crear Orden de Trabajo</h1>
+        <form method="POST">
+            {{ form.csrf_token }}
+
+            {# Campo de Categoría (desplegable) #}
+            <div class="form-group mb-3"> {# Usamos mb-3 para Bootstrap 5, o form-group para Bootstrap 4 #}
+                {{ form.category.label(class="form-label") }} {# O form-control-label para Bootstrap 4 #}
+                {{ form.category(class_="form-select") }} {# Clase para desplegables en Bootstrap 5 #}                             
+                {% if form.category.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.category.errors %}
+                            <span>{{ error }}</span>    
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group mb-3"> 
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class_="form-control") }}
+                {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.title.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {# Campo de Descripción (input o textarea) #}
+            <div class="form-group mb-3">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class_="form-control", rows=5) }}
+                                {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.description.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Botón de Submit #}
+            <div class="mt-4"> {# Margen superior para el botón #}
+                {{ form.submit() }}
+            </div>
+        </form>
+    </div>
+{% endblock %}

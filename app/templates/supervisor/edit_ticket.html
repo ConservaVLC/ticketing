@@ -1,0 +1,126 @@
+{# templates/tickets/edit_ticket.html #}
+{% extends 'base.html' %}
+
+{% block title %}Editar Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<div class="container col-md-8">
+    <div class="row">
+        <div>
+            <h1>Editar Ticket #{{ ticket.id }}</h1>
+            <p><strong>Creado por:</strong> {{ ticket.creator_obj.name }}</p>
+            <p><strong>Título:</strong> {{ ticket.title }}</p>
+            <p><strong>Fecha de Creación:</strong> {{ ticket.timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+            <p><strong>Última Modificación:</strong> 
+                {% if ticket.modified_timestamp %}
+                    {{ ticket.modified_timestamp.strftime('%d/%m/%Y %H:%M') }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+            <p><strong>Fecha de Completado:</strong> 
+                {% if ticket.completed_timestamp %}
+                    <span><strong style="color:red">{{ ticket.completed_timestamp.strftime('%d/%m/%Y %H:%M') }}</strong></span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+
+            <div class="d-flex justify-content-center">
+                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket.id) }}" class="btn btn-outline-secondary col-md-10">
+                    <i class="fas fa-history"></i> Ver Historial
+                </a>
+            </div>
+            <hr>
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+
+                {# Campo de Descripción #}
+                <div class="form-group">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=5, disabled=True) }}
+                    {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                {# Campo de Categoría #}
+                <div class="form-group">
+                    {{ form.category.label(class="form-label") }}
+                    {{ form.category(class="form-control") }}
+                    {% if form.category.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.category.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Campo de Estado #}
+                <div class="form-group">
+                    {{ form.status.label(class="form-label") }}
+                    {{ form.status(class="form-control") }}
+                    {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.status.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Campo de Supervisor Asignado #}
+                <div class="form-group">
+                    {{ form.supervisor.label(class="form-label") }}
+                    {{ form.supervisor(class="form-control") }}
+                    {% if form.supervisor.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.supervisor.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Campo de Operador Asignado #}
+                <div class="form-group">
+                    {{ form.operator.label(class="form-label") }}
+                    {{ form.operator(class="form-control") }}
+                    {% if form.operator.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.operator.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Campo de Observación del Supervisor #}
+                <div class="form-group">
+                    {{ form.observation.label(class="form-label") }}
+                    {{ form.observation(class="form-control", rows=5) }}
+                    {% if form.observation.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.observation.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.submit() }}
+                </div>
+            </form>
+            
+            <hr>
+            {# Opcional: Botón para volver al listado de tickets #}
+            <a href="{{ url_for('supervisor_bp.list_tickets') }}" class="btn btn-secondary mt-3 confirm-cancel-btn">Volver a la lista</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

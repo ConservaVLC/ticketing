@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 80%; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #f2f2f2; padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }
+        .footer { font-size: 0.8em; color: #777; text-align: center; margin-top: 20px; }
+        .button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Ticket Asignado</h2>
+        </div>
+        <p>Estimado(a) {{ operator_name }},</p>
+        <p>Se le ha asignado el Ticket <strong>#{{ ticket.id }}</strong> para su gestión.</p>
+        
+        <h3>Detalles del Ticket:</h3>
+        <p><strong>Descripción:</strong> {{ ticket.description }}</p>
+        <p><strong>Categoría:</strong> {{ ticket.category_obj.name }}</p>
+        {% if ticket.observation %}
+        <p><strong>Observación:</strong> {{ ticket.observation }}</p>
+        {% endif %}
+
+        <p>Puede ver y empezar a trabajar en el ticket en el siguiente enlace:</p>
+        <p><a href="{{ url_for('operator_bp.operator_ticket_detail', ticket_id=ticket.id, _external=True) }}" class="button">Ver Ticket</a></p>
+
+        <p>Saludos,</p>
+        <p>El equipo de Soporte</p>
+        <div class="footer">
+            <p>Este es un correo electrónico automático, por favor no lo responda.</p>
+        </div>
+    </div>
+</body>
+</html>

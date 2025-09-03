@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Crar nueva cateogría{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Crear Nueva Categoría</h1>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.name.label(class="form-control-label") }}
+                {{ form.name(class="form-control") }}
+                {% if form.name.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.name.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.submit() }} {# Este ya tiene la clase 'confirm-submit-btn' #}
+                <a href="{{ url_for('admin_bp.list_categories') }}" class="btn btn-outline-danger confirm-cancel-btn">Cancelar</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+

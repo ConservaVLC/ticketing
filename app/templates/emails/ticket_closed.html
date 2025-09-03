@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 80%; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #f2f2f2; padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }
+        .footer { font-size: 0.8em; color: #777; text-align: center; margin-top: 20px; }
+        .button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Ticket #{{ ticket.id }} {{ new_status_name }}</h2>
+        </div>
+        <p>Estimado(a) usuario(a) ({{ recipient_name }}),</p>
+        <p>Le informamos que el Ticket <strong>#{{ ticket.id }}</strong> ha cambiado su estado a <strong>{{ new_status_name }}</strong> por el operador <strong>{{ operator_name }}</strong>.</p>
+        
+        <h3>Detalles del Ticket:</h3>
+        <p><strong>Descripción:</strong> {{ ticket.description }}</p>
+        <p><strong>Categoría:</strong> {{ ticket.category_obj.name }}</p>
+        <p><strong>Estado final:</strong> {{ new_status_name }}</p>
+        {% if ticket.observation %}
+        <p><strong>Última observación:</strong> {{ ticket.observation }}</p>
+        {% endif %}
+        <p><strong>Hora de finalización:</strong> {{ ticket.completed_timestamp.strftime('%d/%m/%Y %H:%M:%S') if ticket.completed_timestamp else 'N/A' }}</p>
+
+        <p>Puede ver los detalles completos del ticket en el siguiente enlace:</p>
+        <p><a href="{{ url_for('operator_bp.operator_ticket_detail', ticket_id=ticket.id, _external=True) }}" class="button">Ver Ticket</a></p>
+
+        <p>Saludos,</p>
+        <p>El equipo de Soporte</p>
+        <div class="footer">
+            <p>Este es un correo electrónico automático, por favor no lo responda.</p>
+        </div>
+    </div>
+</body>
+</html>

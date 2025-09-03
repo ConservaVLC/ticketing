@@ -1,0 +1,93 @@
+{# app/ticket_management/templates/operator_ticket_detail.html #}
+
+{% extends "base.html" %} 
+
+{% block title %}Editar ticket{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Detalle Ticket #{{ ticket.id }} - {{ ticket.title }}</h2>
+
+    {# Mensajes Flash #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {# Información del Ticket #}
+    <div class="card mb-4">
+        <div class="card-header">
+            Información del Ticket
+        </div>
+        <div class="card-body">
+            {# AHORA MOSTRAMOS EL ESTADO ACTUAL DE FORMA SEPARADA Y CLARA #}
+            <p><strong>Estado Actual:</strong> 
+                <span class="badge 
+                    {% if ticket.status_obj.value == 'pending' %}bg-secondary
+                    {% elif ticket.status_obj.value == 'in_progress' %}bg-info
+                    {% elif ticket.status_obj.value == 'completed' %}bg-success
+                    {% elif ticket.status_obj.value == 'cancelled' %}bg-danger
+                    {% elif ticket.status_obj.value == 'closed' %}bg-dark
+                    {% elif ticket.status_obj.value == 'rejected' %}bg-warning
+                    {% else %}bg-light text-dark
+                    {% endif %}">
+                    {{ ticket.status_obj.name if ticket.status_obj else 'N/A' }}
+                </span>
+            </p>
+            <p><strong>Prioridad:</strong> {{ ticket.priority_obj.name if ticket.priority_obj else 'N/A' }}</p>
+            <p><strong>Categoría:</strong> {{ ticket.category_obj.name if ticket.category_obj else 'N/A' }}</p>
+            <p><strong>Creado por:</strong> {{ ticket.creator_obj.name }} el {{ ticket.created_timestamp.strftime('%d/%m/%Y %H:%M') if ticket.created_timestamp else 'N/A' }}</p>
+            <p><strong>Asignado a:</strong> {{ ticket.asigned_operator_obj.username if ticket.asigned_operator_obj else 'N/A' }}</p>
+            <p><strong>Supervisor Asignado:</strong> {{ ticket.asignated_supervisor_obj.username if ticket.asignated_supervisor_obj else 'N/A' }}</p>
+            {% if ticket.completed_timestamp %}
+            <p><strong>Completado/Cancelado el:</strong> {{ ticket.completed_timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+            {% endif %}
+            <p><strong>Última Modificación:</strong> {{ ticket.modified_timestamp.strftime('%d/%m/%Y %H:%M') if ticket.modified_timestamp else 'N/A' }}</p>
+            <hr>
+            <p><strong>Descripción:</strong></p>
+            <div class="alert alert-light border">{{ ticket.description | safe }}</div>
+            <div class="d-flex justify-content-center">
+                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket.id) }}" class="btn btn-outline-secondary col-md-10 align-items-center">
+                        <i class="fas fa-history"></i> Ver Historial
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# Formulario para que el operador edite el ticket #}
+    <form method="POST">
+        {{ form.csrf_token }}
+
+        {# El SELECT DE ESTADO AHORA SOLO TIENE "Completado" y "Cancelado" #}
+        <div class="mb-3">
+            {{ form.status.label(class="form-label") }}
+            {# El select se deshabilita si el ticket no es editable en general #}
+            {{ form.status(class_="form-select", disabled=not is_ticket_editable_by_operator) }} 
+            {% for error in form.status.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.operator_notes.label(class="form-label") }}
+            {# El textarea se deshabilita si el ticket no es editable en general #}
+            {{ form.operator_notes(class_="form-control", rows=5, disabled=not is_ticket_editable_by_operator) }}
+            {% for error in form.operator_notes.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        {# El botón de submit se muestra solo si el ticket es editable #}
+        {% if is_ticket_editable_by_operator %}
+            {{ form.submit() }}
+        {% else %}
+            <p class="alert alert-info">Este ticket está en un estado final ({{ ticket.status_obj.name if ticket.status_obj else 'N/A' }}) y no puede ser modificado por el operador.</p>
+        {% endif %}
+
+        <a href="{{ url_for('operator_bp.operator_tickets') }}" class="btn btn-secondary ms-2">Volver a la lista</a>
+    </form>
+</div>
+{% endblock %}

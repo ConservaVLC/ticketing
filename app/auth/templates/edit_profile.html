@@ -1,0 +1,83 @@
+{# app/auth/templates/auth/edit_profile.html #}
+{% extends 'base.html' %}
+
+{% block title %}Editar Perfil{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <h1>Editar Perfil</h1>
+            <hr>
+            <p><strong>Nombre de Usuario:</strong> {{ current_user.username }}</p>
+            <p><strong>Email:</strong> {{ current_user.email }}</p>
+            <p class="text-muted">El nombre de usuario y el email no pueden ser cambiados desde aquí.</p>
+            <hr>
+
+            <form method="POST" action="{{ url_for('auth.edit_profile') }}">
+                {{ form.hidden_tag() }}
+
+                <div class="form-group mb-3">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                    {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.first_name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    {{ form.middleName.label(class="form-label") }}
+                    {{ form.middleName(class="form-control") }}
+                    {% if form.middleName.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.last_name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    {{ form.firstSurname.label(class="form-label") }}
+                    {{ form.firstSurname(class="form-control") }}
+                    {% if form.firstSurname.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.phone_number.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group mb-3">
+                    {{ form.secondSurname.label(class="form-label") }}
+                    {{ form.secondSurname(class="form-control") }}
+                    {% if form.secondSurname.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.address.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.role.label(class="form-label") }}
+                    {{ form.role(class="form-control", readonly=True, disabled=True) }}
+                </div>
+
+                <div class="form-group mb-3">
+                    {{ form.submit() }}
+                </div>
+            </form>
+
+            <hr>
+            {# Enlace a la vista de cambio de contraseña, si la implementas #}
+            <p><a href="{{ url_for('auth.change_password') }}" class="btn btn-secondary">Cambiar mi Contraseña</a></p>
+            <p><a href="{{ url_for('main.home') }}" class="btn btn-link">Volver al inicio</a></p>
+        </div>
+    </div>
+{% endblock %}

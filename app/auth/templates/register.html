@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de usuarios{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="text-center">Registrar un usuario</h1>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="row">
+                        <div class="col-md-6">
+                        <h4> Datos de la persona:</h4>
+                            <div class="form-group">
+                            {{ form.name.label(class="form-control-label") }}
+                                {{ form.name(class="form-control") }}
+                                {% for error in form.username.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.middleName.label(class="form-control-label") }}
+                                {{ form.middleName(class="form-control") }}
+                                {% for error in form.username.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.firstSurname.label(class="form-control-label") }}
+                                {{ form.firstSurname(class="form-control") }}
+                                {% for error in form.username.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.secondSurname.label(class="form-control-label") }}
+                                {{ form.secondSurname(class="form-control") }}
+                                {% for error in form.username.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.role.label(class="form-control-label") }}
+                                {{ form.role(class="form-control") }}
+                                {% for error in form.username.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    
+                    
+                        <div class="col-md-6">
+                            <h4> Datos de inicio de sesión:</h4>
+                            <div class="form-group">
+                                {{ form.username.label(class="form-control-label") }}
+                                {{ form.username(class="form-control") }}
+                                {% for error in form.username.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.email.label(class="form-control-label") }}
+                                {{ form.email(class="form-control") }}
+                                {% for error in form.email.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.password.label(class="form-control-label") }}
+                                {{ form.password(class="form-control") }}
+                                {% for error in form.password.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-group">
+                                {{ form.password2.label(class="form-control-label") }}
+                                {{ form.password2(class="form-control") }}
+                                {% for error in form.password2.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    <div class="row text-center">
+                        <div style="margin-top: 3vh;">
+                            <div class="form-group">
+                                {{ form.submit() }}
+                            </div>
+                            <div class="form-group">
+                                <a class="btn btn-outline-danger confirm-cancel-btn col-md-6" onclick="" href="{{ url_for('main.home')}}">Cancelar</a>
+                            </div>
+                        </div>
+                    <div>   
+                </form> 
+            </div>
+        </div>
+    </div>
+    {# Contenedor principal para todos los mensajes flash flotantes #}
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {# Cada mensaje individual será un Toast de Bootstrap #}
+                        {# La clase de color y el texto blanco se aplican directamente al .toast #}
+                        <div class="toast align-items-center text-white {% if category == 'success' %}bg-success{% elif category == 'error' %}bg-danger{% elif category == 'info' %}bg-info{% elif category == 'warning' %}bg-warning{% else %}bg-secondary{% endif %} border-0"
+                            role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000"> {# data-bs-delay: 5 segundos #}
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    {{ message }}
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+</div>
+
+{% endblock %}

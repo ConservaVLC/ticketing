@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h1>Editar usuario: {{ user.username }}</h1>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="row">
+                            <div class="col-md-6">
+                            <h4> Datos de la persona:</h4>
+                                <div class="form-group">
+                                {{ form.name.label(class="form-control-label") }}
+                                    {{ form.name(class="form-control") }}
+                                    {% for error in form.username.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.middleName.label(class="form-control-label") }}
+                                    {{ form.middleName(class="form-control") }}
+                                    {% for error in form.username.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.firstSurname.label(class="form-control-label") }}
+                                    {{ form.firstSurname(class="form-control") }}
+                                    {% for error in form.username.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.secondSurname.label(class="form-control-label") }}
+                                    {{ form.secondSurname(class="form-control") }}
+                                    {% for error in form.username.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.role.label(class="form-control-label") }}
+                                    {{ form.role(class="form-control") }}
+                                    {% for error in form.username.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        
+                        
+                            <div class="col-md-6">
+                                <h4> Datos de inicio de sesión:</h4>
+                                <div class="form-group">
+                                    {{ form.username.label(class="form-control-label") }}
+                                    {{ form.username(class="form-control") }}
+                                    {% for error in form.username.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.email.label(class="form-control-label") }}
+                                    {{ form.email(class="form-control") }}
+                                    {% for error in form.email.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.password.label(class="form-control-label") }}
+                                    {{ form.password(class="form-control") }}
+                                    {% for error in form.password.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.confirm_password.label(class="form-control-label") }}
+                                    {{ form.confirm_password(class="form-control") }}
+                                    {% for error in form.confirm_password.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                        <div class="row text-center">
+                            <div style="margin-top: 3vh;">
+                                <div class="form-group">
+                                    {{ form.submit() }}
+                                </div>
+                                <div class="form-group">
+                                    <a class="btn btn-outline-danger confirm-cancel-btn col-md-6" onclick="" href="{{ url_for('auth.list_users')}}">Cancelar</a>
+                                </div>
+                            </div>
+                        <div>   
+                    </form> 
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

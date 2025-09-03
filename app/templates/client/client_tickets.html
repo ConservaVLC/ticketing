@@ -1,0 +1,162 @@
+{# app/ticket_management/templates/tickets/my_tickets.html #}
+
+{% extends "base.html" %}
+
+{% block title %} Mis ticket {% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {# CDN de Font Awesome para la lupa: #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+    <div class="container-flex">
+        <h1>Mis Tickets de Orden de Trabajo</h1>
+        <hr>
+
+        {% if tickets %}
+        <form method="GET" action="{{ url_for('client_bp.client_tickets') }}">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        {# FILTROS: Una fila dedicada para los campos de búsqueda #}
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.ticket_id(class="form-control", placeholder=form.ticket_id.label.text) }}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por ID">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.search_title(class="form-control", placeholder=form.search_title.label.text) }}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar en Título">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.category_name(class="form-control", placeholder=form.category_name.label.text) }}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por categoría">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.status_name(class="form-control", placeholder=form.status_name.label.text) }}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por estado">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.supervisor_username(class="form-control", placeholder=form.supervisor_username.label.text) }}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por supervisor">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.operator_username(class="form-control", placeholder=form.operator_username.label.text) }}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por operador">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.start_date(class="form-control", type="date", placeholder="Fecha Desde") }} {# Usar placeholder directo aquí para evitar label.text si el label es largo #}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Fecha Desde">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                {{ form.end_date(class="form-control", type="date", placeholder="Fecha Hasta") }} {# Usar placeholder directo #}
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Fecha Hasta">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                        {# Columna para el botón de limpiar filtros #}
+                        <td>{{ form.clear_filters(class="btn btn-outline-secondary text-center") }}</td>
+                    </tr>
+                    <tr>
+                        <th>ID</th>
+                        <th>Categoría</th>
+                        <th>Título</th>
+                        <th>Estado</th>
+                        <th>Supervisor asignado</th>
+                        <th>Operador asignado</th>
+                        <th>Fecha de Creación</th>
+                        <th>Última Modificación</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                    <tr>
+                        <td>{{ ticket.id }}</td>
+                        <td>{{ ticket.category_obj.name }}</td>
+                        <td>{{ ticket.title | truncate(50, True, '...') }}</td> {# Trunca la descripción si es muy larga #}
+                        <td>
+                            {% if ticket.status_obj %}
+                                {% set status_class = '' %}
+                                {% if ticket.status_obj.value == 'cancelled' %}
+                                    {% set status_class = 'bg-danger' %}
+                                {% elif ticket.status_obj.value == 'in_progress' %}
+                                    {% set status_class = 'bg-warning text-dark' %}
+                                {% elif ticket.status_obj.value == 'closed' %}
+                                    {% set status_class = 'bg-primary' %}
+                                {% elif ticket.status_obj.value == 'completed' %}
+                                    {% set status_class = 'bg-success' %}
+                                {% elif ticket.status_obj.value == 'pending' %}
+                                    {% set status_class = 'bg-orange' %}
+                                {% else %}
+                                    {% set status_class = 'bg-secondary' %} {# Fallback #}
+                                {% endif %}
+                                <span class="badge badge-status {{ status_class }}">{{ ticket.status_obj.name }}</span>
+                            {% else %}
+                                <span class="badge badge-status bg-secondary">Desconocido</span>
+                            {% endif %}
+                        </td>
+                                                <td>
+                            {% if ticket.asignated_supervisor_obj %}
+                                {{ ticket.asignated_supervisor_obj.username }}
+                            {% else %}
+                                --- Sin asignar ---
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ticket.asigned_operator_obj %}
+                                {{ ticket.asigned_operator_obj.username }}
+                            {% else %} 
+                                --- Sin asignar ---
+                            {% endif %}
+                        </td>
+                        <td>{{ ticket.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ ticket.modified_timestamp.strftime('%d/%m/%Y %H:%M') if ticket.modified_timestamp else 'N/A' }}</td>
+                        <td class="text-center">
+                            {# Botón "Gestionar Ticket" solo para Completado o Cancelado #}
+                            {% if ticket.status_obj and (ticket.status_obj.value == 'completed' or ticket.status_obj.value == 'cancelled') %}
+                            <a href="{{ url_for('client_bp.client_manage_completed_ticket', ticket_id=ticket.id) }}" class="btn btn-sm btn-info m-2 col-md-8">Gestionar Ticket</a>
+                            {% endif %}
+                            <a href="{{ url_for('client_bp.client_add_description', ticket_id=ticket.id) }}" class="btn btn-sm btn-warning m-2 col-md-8">Ver/Editar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No has cargado ningún ticket todavía.</p>
+            <a href="{{ url_for('client_bp.create_ticket') }}" class="btn btn-primary">Crear Nuevo Ticket</a>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 80%; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { background-color: #f2f2f2; padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }
+        .footer { font-size: 0.8em; color: #777; text-align: center; margin-top: 20px; }
+        .button {
+            display: inline-block;
+            background-color: #dc3545; /* Color rojo para el rechazo */
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Ticket #{{ ticket.id }} Rechazado</h2>
+        </div>
+        <p>¡Hola!</p>
+        <p>Te informamos que el Ticket <strong>#{{ ticket.id }}</strong> ({{ ticket.title }}) ha sido <strong>RECHAZADO</strong> por el cliente <strong>{{ client_name }}</strong>.</p>
+
+        <h3>Motivo del rechazo:</h3>
+        <p><em>{{ note }}</em></p>
+        
+        <p>Por favor, revisa el ticket y toma las acciones necesarias para continuar.</p>
+
+        <p>Puedes ver los detalles completos del ticket en el siguiente enlace:</p>
+        <p><a href="{{ ticket_url }}" class="button">Ver Ticket</a></p>
+
+        <p>Saludos,</p>
+        <p>El equipo de Soporte</p>
+        <div class="footer">
+            <p>Este es un correo electrónico automático, por favor no lo responda.</p>
+        </div>
+    </div>
+</body>
+</html>

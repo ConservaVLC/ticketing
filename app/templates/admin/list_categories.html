@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Categorías{% endblock %}
+
+{% block content %}
+    <div class="container col-md-4">
+        <h1>Listado de Categorías</h1>
+        <a href="{{ url_for('admin_bp.create_category') }}" class="btn btn-primary mb-3">Crear nueva cateogría</a>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in categories %}
+                <tr>
+                    <td>{{ category.id }}</td>
+                    <td>{{ category.name }}</td>
+                    <td>
+                        <a href="{{ url_for('admin_bp.edit_category', category_id=category.id) }}" class="btn btn-sm btn-warning">Editar</a>
+                        
+                        {# Formulario para eliminar: Importante que sea POST #}
+                        <form action="{{ url_for('admin_bp.delete_category', category_id=category.id) }}" method="POST" style="display:inline;">
+                            {{ form.hidden_tag() }}
+                            <button type="submit" class="btn btn-sm btn-danger" 
+                                    onclick="return confirm('¿Está seguro que desea continuar con la eliminación? Esta acción no puede deshacerse.');">Borrar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

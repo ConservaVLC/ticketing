@@ -1,0 +1,135 @@
+body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+.container {
+    background-color: #f8f8f8;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin: 50px auto;
+}
+h1 { color: #0056b3; 
+    text-align: center; 
+    margin-bottom: 20px; }
+    
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+}
+input[type="date"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+button {
+    background-color: #0026ff;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.3s ease;
+}
+button:hover {
+    background-color: #0056b3;
+}
+.flash-messages {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+.flash-messages li {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+.flash-messages li.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+.flash-messages li.danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+/* ¡AÑADE ESTO! */
+.flash-messages li.info {
+    background-color: #d1ecf1; /* Fondo azul claro */
+    color: #0c5460;           /* Texto azul oscuro */
+    border: 1px solid #bee5eb; /* Borde azul */
+}
+/* Opcional: Si también usas la categoría 'warning' */
+.flash-messages li.warning {
+    background-color: #fff3cd; /* Fondo amarillo claro */
+    color: #856404;           /* Texto amarillo oscuro */
+    border: 1px solid #ffeeba; /* Borde amarillo */
+}
+
+
+/* Clases personalizadas para los badges de estado */
+.badge-status {
+    padding: 0.5em 0.75em;
+    border-radius: 0.375rem; /* El mismo border-radius que los badges de Bootstrap 5 */
+    font-weight: 600;
+    font-size: 0.8em;
+    display: inline-block; /* Para que tome el padding */
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* Colores según tu especificación */
+.badge-status.bg-orange {
+    background-color: #fd7e14 !important; /* Naranja de Bootstrap (warning es más amarillo) */
+    color: #fff; /* Texto blanco para contraste */
+}
+
+/* Ajustes de color de texto para badges claros */
+.badge-status.bg-warning {
+    color: #212529 !important; /* Texto oscuro para el fondo amarillo */
+}
+
+#flash-message-container {
+    position: fixed; /* Hace que el contenedor se posicione respecto a la ventana del navegador */
+    top: 60px; /* Distancia desde la parte superior de la ventana */
+    left: 50%; /* Inicia el elemento en el centro horizontalmente */
+    transform: translateX(-50%); /* Ajusta el elemento para que su propio centro esté en el 50% */
+    z-index: 1050; /* Asegura que esté por encima de otros elementos de Bootstrap (ej. navbars, modals) */
+    width: 80%; /* Ancho del contenedor de mensajes. Ajusta según necesites */
+    max-width: 600px; /* Opcional: Ancho máximo para pantallas grandes */
+    padding: 0 15px; /* Espacio interno para que los alerts no toquen los bordes */
+    box-sizing: border-box; /* Incluye padding en el cálculo del ancho */
+}
+
+/* Opcional: Ajustes para dispositivos muy pequeños si el ancho es un problema */
+@media (max-width: 576px) {
+    #flash-message-container {
+        width: 95%; /* Más ancho en móviles */
+        top: 10px; /* Un poco más arriba */
+    }
+}
+
+/* Algunos ajustes visuales para la lista si deseas */
+#flash-messages {
+    list-style: none; /* Quita los puntos de la lista */
+    padding: 0;
+    margin: 0;
+}

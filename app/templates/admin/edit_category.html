@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Editar cateogría{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Editar cateogría: {{ category.name }}</h1>
+        <form method="POST">
+            {{ form.hidden_tag() }} {# Incluye el token CSRF #}
+            <div class="form-group">
+                {{ form.name.label(class="form-control-label") }}
+                {{ form.name(class="form-control") }}
+                {% if form.name.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.name.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.submit() }}
+                <a href="{{ url_for('admin_bp.list_categories') }}" class="btn btn-outline-danger">Cancelar</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

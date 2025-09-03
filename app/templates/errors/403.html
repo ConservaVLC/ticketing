@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error 403 - Acceso Denegado</title>
+    <!-- Incluye Tailwind CSS para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos generales para la página, copiados del 500 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #2c3e50; /* Azul oscuro para un fondo más serio */
+            color: #ecf0f1; /* Texto claro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Evita barras de desplazamiento */
+            position: relative;
+        }
+
+        /* Efecto de partículas de fondo (simulando fallos o polvo) */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 20%);
+            animation: backgroundPulse 15s infinite alternate;
+        }
+
+        @keyframes backgroundPulse {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        .error-container {
+            max-width: 700px;
+            padding: 50px;
+            background-color: rgba(44, 62, 80, 0.8); /* Fondo semitransparente para el contenedor */
+            border-radius: 16px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            z-index: 10;
+            backdrop-filter: blur(5px); /* Efecto de desenfoque en el fondo */
+            animation: fadeInScale 1s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Estilo para el número 403 (adaptado del 500) */
+        .error-number {
+            font-size: 8rem; /* Tamaño consistente con el 500 */
+            font-weight: 900;
+            line-height: 1;
+            color: #f39c12; /* Un color naranja/amarillo para 403, diferente del rojo de 500 */
+            text-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
+            margin-bottom: 20px;
+            animation: pulse 2s infinite alternate; /* Mantener la animación de pulso */
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        /* Estilo para el mensaje */
+        .error-message-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ecf0f1;
+            margin-bottom: 15px;
+        }
+
+        .error-message-description {
+            font-size: 1.2rem;
+            color: #bdc3c7;
+            margin-bottom: 40px;
+        }
+
+        /* Estilo para los botones (copiado del 500) */
+        .btn-return {
+            padding: 14px 35px;
+            border-radius: 9999px; /* Botón tipo píldora */
+            background-color: #3498db; /* Azul primario */
+            color: white;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .btn-return:hover {
+            background-color: #2980b9;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Estilo adicional para el botón de Iniciar Sesión */
+        .btn-secondary-alt {
+            padding: 14px 35px;
+            border-radius: 9999px;
+            background-color: #7f8c8d; /* Gris */
+            color: white;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            margin-right: 15px; /* Espacio entre botones */
+        }
+        .btn-secondary-alt:hover {
+            background-color: #6c7a89;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-number">403</div>
+        
+        <p class="error-message-title">Acceso Denegado</p>
+        <p class="error-message-description">
+            No tienes permiso para acceder a esta página o recurso.
+        </p>
+        
+        <!-- Muestra información contextual si el usuario está autenticado -->
+        {% if current_user.is_authenticated %}
+        <p class="text-md text-gray-400 mb-6">
+            Has iniciado sesión como: <span class="font-semibold">{{ current_user.username }}</span> (Rol: <span class="font-semibold">{{ current_user.position }}</span>)
+        </p>
+        {% else %}
+        <p class="text-md text-gray-400 mb-6">
+            Si crees que deberías tener acceso, por favor, inicia sesión con una cuenta autorizada.
+        </p>
+        <a href="{{ url_for('auth_bp.login') }}" class="btn-secondary-alt">Iniciar Sesión</a>
+        {% endif %}
+        
+        <a href="{{ url_for('main.home') }}" class="btn-return">Volver al Inicio</a>
+    </div>
+</body>
+</html>

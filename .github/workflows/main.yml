@@ -5,10 +5,10 @@ on:
     branches:
       -main
 env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: "us-central1" # Cambia a tu región preferida
-  CLOUD_RUN_SERVICE_NAME: "ticketing-app"
-  ARTIFACT_REGISTRY_REPO: "ticketing-run-repo" # Cambia al nombre de tu repositorio de Artifact Registry
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }} # OBTENER DE GCP
+  GCP_REGION: "us-central1" # OBTENER DE GCP
+  CLOUD_RUN_SERVICE_NAME: "ticketing-app" # CAMBIAR
+  ARTIFACT_REGISTRY_REPO: "ticketing-run-repo" # CAMBIAR
 
 jobs:
   build-and-test:

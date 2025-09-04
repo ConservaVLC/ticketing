@@ -3,6 +3,7 @@ from wtforms import SubmitField, StringField
 from wtforms.validators import DataRequired, Length, ValidationError
 from app import db 
 from ..models import Category
+from app.repositories import SQLCategoryRepository
 
 # FORMULARIO VACÍO PARA TRATAMIENTO DE 'CSRF'
 class EmptyForm(FlaskForm):
@@ -19,8 +20,8 @@ class CategoryForm(FlaskForm):
         self.original_name = original_name
 
     def validate_name(self, name):
-        from sqlalchemy import select # Importar aquí para evitar posibles importaciones circulares
         if name.data != self.original_name: # Solo validar si el nombre ha cambiado
-            category = db.session.execute(select(Category).filter_by(name=name.data)).scalar_one_or_none()
+            category_repository = SQLCategoryRepository()
+            category = category_repository.find_by_name(name.data)
             if category:
                 raise ValidationError('Esta categoría ya existe')

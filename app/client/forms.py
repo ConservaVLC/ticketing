@@ -4,6 +4,7 @@ from wtforms.validators import DataRequired, Length
 from app import db 
 from app.models import Category
 from flask import current_app
+from app.repositories import SQLCategoryRepository
 
 class TicketForm(FlaskForm):
 
@@ -17,8 +18,9 @@ class TicketForm(FlaskForm):
         super().__init__(*args, **kwargs)
         # Poblar las opciones del SelectField 'category' desde la base de datos
         with current_app.app_context(): # Asegura que estamos en un contexto de aplicación
+            category_repository = SQLCategoryRepository()
             # Las opciones son tuplas (valor_interno, nombre_visible)
-            self.category.choices = [(c.value, c.name) for c in db.session.execute(db.select(Category)).scalars().all()]
+            self.category.choices = [(c.value, c.name) for c in category_repository.get_all()]
 
 # --- Formulario para agregar nota SOLO PARA EL PERFIL "CLIENTE" un Ticket existente ---
 class ClientDescriptionForm(FlaskForm):

@@ -7,7 +7,7 @@ from app.supervisor.forms import TicketFilterForm
 from sqlalchemy.exc import SQLAlchemyError
 from app.operator.forms import OperatorTicketForm
 from app.models import Ticket, Status, TicketHistory
-from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email, get_filtered_tickets_query
+from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email
 from app.auth.models import Persona
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -15,9 +15,14 @@ from datetime import datetime, timezone
 from flask import request
 from app.auth.decorators import operador_required
 import logging
-
+from app.repositories import SQLTicketRepository, SQLStatusRepository, SQLTicketHistoryRepository
 
 logger = logging.getLogger(__name__)
+
+# Instantiate repositories
+ticket_repository = SQLTicketRepository()
+status_repository = SQLStatusRepository()
+ticket_history_repository = SQLTicketHistoryRepository()
 
 
 # ------------------------------------------------------------------------------
@@ -36,12 +41,7 @@ def operator_tickets():
 
     # 2. Usa la función de utilidad, pasándole la instancia del formulario
     #    'filter_by_user_role=True' asegura que solo vea sus tickets.
-    query = get_filtered_tickets_query(form=form, filter_by_user_role=True)
-    
-    # Ordena los tickets por timestamp de forma descendente
-    tickets = db.session.execute(
-        query.order_by(Ticket.timestamp.desc())
-    ).scalars().all()
+    tickets = ticket_repository.get_filtered_tickets(form=form, filter_by_user_role=True)
 
     logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó sus tickets. Se encontraron {len(tickets)} tickets.')
     
@@ -64,7 +64,7 @@ def operator_tickets():
 @login_required
 @operador_required
 def operator_ticket_detail(ticket_id):
-    ticket = db.session.execute(select(Ticket).filter_by(id=ticket_id)).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id(ticket_id)
 
     if not ticket or ticket.asigned_operator_id != current_user.id:
         flash('Ticket no encontrado o no asignado a ti.', 'danger')
@@ -74,12 +74,13 @@ def operator_ticket_detail(ticket_id):
     is_ticket_editable_by_operator = (ticket.status_obj and ticket.status_obj.value in editable_status_values)
 
     old_values = get_ticket_attributes_for_history(ticket)
-    old_status_value = db.session.execute(select(Status.value).filter_by(id=old_values['status_id'])).scalar_one_or_none()
+    old_status = status_repository.find_by_id(old_values['status_id'])
+    old_status_value = old_status.value if old_status else None
 
     form = OperatorTicketForm(obj=ticket)
 
-    completed_status_obj = db.session.execute(select(Status).filter_by(value='completed')).scalar_one_or_none()
-    cancelled_status_obj = db.session.execute(select(Status).filter_by(value='cancelled')).scalar_one_or_none()
+    completed_status_obj = status_repository.find_by_value('completed')
+    cancelled_status_obj = status_repository.find_by_value('cancelled')
     
     allowed_status_choices_for_select = []
     if completed_status_obj:
@@ -105,9 +106,7 @@ def operator_ticket_detail(ticket_id):
     if form.validate_on_submit() and is_ticket_editable_by_operator:
         try:
             new_status_id = form.status.data
-            new_status_obj = db.session.execute(
-                select(Status).filter_by(id=new_status_id)
-            ).scalar_one_or_none()
+            new_status_obj = status_repository.find_by_id(new_status_id)
 
             flash_status_msg = ''
             should_send_client_email = False 
@@ -153,7 +152,7 @@ def operator_ticket_detail(ticket_id):
                 change_details=change_details_msg 
             )
 
-            db.session.add(ticket)
+            ticket_repository.save(ticket)
             db.session.commit()
         
             flash(f'Ticket {ticket.id} actualizado exitosamente. {flash_status_msg}', 'success')
@@ -219,9 +218,7 @@ def ticket_history(ticket_id):
     Muestra el historial de cambios para un ticket específico.
     Si el usuario puede acceder a esta ruta, se asume que tiene permisos para ver el ticket.
     """
-    ticket = db.session.execute(
-        select(Ticket).filter_by(id=ticket_id)
-    ).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id(ticket_id)
 
     if not ticket:
         flash('Ticket no encontrado.', 'danger')
@@ -234,11 +231,7 @@ def ticket_history(ticket_id):
     # ya ha pasado por una verificación de permisos en la página de detalle del ticket.
     # Si esa verificación falló, nunca habrían llegado a esta URL.
 
-    history_records = db.session.execute(
-        select(TicketHistory)
-        .filter_by(ticket_id=ticket_id)
-        .order_by(TicketHistory.change_timestamp.desc())
-    ).scalars().all()
+    history_records = ticket_history_repository.find_by_ticket_id(ticket_id)
 
     # --- Logger: INFO - Consulta de histórico por parte del usuario ---
     logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó el registro histórico del ticket {ticket.id}.')

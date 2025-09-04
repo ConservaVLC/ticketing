@@ -6,7 +6,7 @@ from app.models import Ticket
 from sqlalchemy.exc import SQLAlchemyError
 from .forms import TicketEditForm, AssignTicketForm, TicketFilterForm
 from ..models import Ticket, Status, Category
-from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email, get_filtered_tickets_query
+from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email
 from app.auth.models import Persona
 from sqlalchemy import  select, cast, String, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -20,9 +20,15 @@ from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
 import logging
+from app.repositories import SQLTicketRepository, SQLStatusRepository, SQLUserRepository
 
 
 logger = logging.getLogger(__name__)
+
+# Instantiate repositories
+ticket_repository = SQLTicketRepository()
+status_repository = SQLStatusRepository()
+user_repository = SQLUserRepository()
 
 # ------------------------------------------------------------------------------
 #               FUNCIÓN: LISTADO DE TICKETS FILTRABLE (SUPERVISOR/ADMINISTRADOR)
@@ -36,14 +42,7 @@ def list_tickets():
     if form.clear_filters.data:
         return redirect(url_for('supervisor_bp.list_tickets'))
     
-    # Aquí filter_by_user_role=False, porque el admin debe ver TODOS,
-    # y el supervisor se filtra internamente en get_filtered_tickets_query
-    query = get_filtered_tickets_query(form=form, filter_by_user_role=True) 
-    # El filtro de rol 'is_supervisor' se aplica dentro de get_filtered_tickets_query
-    # para el supervisor, y no se aplica para el admin.
-
-    # Ordena y ejecuta la consulta
-    tickets = db.session.execute(query.order_by(Ticket.timestamp.desc())).scalars().all()
+    tickets = ticket_repository.get_filtered_tickets(form=form, filter_by_user_role=True)
 
     logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó los tickets. Se encontraron {len(tickets)} tickets (el número puede variar por aplicación de filtros)')
 
@@ -65,14 +64,7 @@ def list_tickets():
 def export_tickets_to_xlsx():
     form = TicketFilterForm(request.args) # El formulario ya captura los parámetros de la URL
 
-    # --- ¡Aquí está la modificación clave! ---
-    # Reutiliza la función de utilidad para obtener la consulta
-    # 'filter_by_user_role=True' asegura que si es supervisor, solo verá sus tickets
-    # y si es admin, verá todos.
-    query = get_filtered_tickets_query(form=form, filter_by_user_role=True)
-    # ------------------------------------------
-
-    tickets_to_export = db.session.execute(query.order_by(Ticket.timestamp.desc())).scalars().all()
+    tickets_to_export = ticket_repository.get_filtered_tickets(form=form, filter_by_user_role=True)
 
     # --- Generación del archivo XLSX con openpyxl ---
     workbook = Workbook()
@@ -152,7 +144,7 @@ def export_tickets_to_xlsx():
 @supervisor_or_admin_required
 
 def edit_ticket(ticket_id):
-    ticket = db.session.execute(select(Ticket).filter_by(id=ticket_id)).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id(ticket_id)
 
     if not ticket:
         flash('Ticket no encontrado.', 'danger')
@@ -188,7 +180,7 @@ def edit_ticket(ticket_id):
         new_asigned_operator_id = form.operator.data 
         new_observation = form.observation.data or ""
 
-        new_status_obj = db.session.execute(select(Status).filter_by(id=new_status_id)).scalar_one_or_none()
+        new_status_obj = status_repository.find_by_id(new_status_id)
         new_status_value = new_status_obj.value if new_status_obj else None
         
         # Obtener el nombre legible del nuevo estado para las plantillas
@@ -235,7 +227,7 @@ def edit_ticket(ticket_id):
                 new_values=new_values_for_history
             )
 
-            db.session.add(ticket)
+            ticket_repository.save(ticket)
             db.session.commit()
             
             # --- LÓGICA DE ENVÍO DE CORREOS ---
@@ -332,7 +324,7 @@ def edit_ticket(ticket_id):
 @supervisor_or_admin_required
 
 def assign_ticket(ticket_id):
-    ticket = db.session.execute(select(Ticket).filter_by(id=ticket_id)).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id(ticket_id)
 
     if not ticket:
         flash('Ticket no encontrado.', 'danger')
@@ -357,16 +349,14 @@ def assign_ticket(ticket_id):
                 flash('Por favor, selecciona un operador válido.', 'warning')
                 return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
 
-            selected_operator = db.session.execute(
-                select(Persona).filter_by(id=operator_id)
-            ).scalar_one_or_none()
+            selected_operator = user_repository.find_by_id(operator_id)
 
             if not selected_operator:
                 flash('Operador seleccionado no válido.', 'danger')
                 return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
 
             # Obtener el estado "asignado"
-            assigned_status = db.session.execute(select(Status).filter_by(value='in_progress')).scalar_one_or_none()
+            assigned_status = status_repository.find_by_value('in_progress')
             if not assigned_status:
                 flash('Error: El estado "Asignado" no se encontró en la base de datos. Por favor, contacte a un administrador.', 'error')
                 return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
@@ -388,7 +378,7 @@ def assign_ticket(ticket_id):
                 new_values=new_values
             )
 
-            db.session.add(ticket)
+            ticket_repository.save(ticket)
             db.session.commit()
 
             # --- Logger: INFO - Operador asignado por el Administrador/Supervisor  ---
@@ -428,9 +418,3 @@ def assign_ticket(ticket_id):
 
     # Para la petición GET o si la validación falla
     return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
-
-
-
-
-
-

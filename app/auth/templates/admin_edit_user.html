@@ -15,35 +15,35 @@
                                 <div class="form-group">
                                 {{ form.name.label(class="form-control-label") }}
                                     {{ form.name(class="form-control") }}
-                                    {% for error in form.username.errors %}
+                                    {% for error in form.name.errors %}
                                     <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 </div>
                                 <div class="form-group">
                                     {{ form.middleName.label(class="form-control-label") }}
                                     {{ form.middleName(class="form-control") }}
-                                    {% for error in form.username.errors %}
+                                    {% for error in form.middleName.errors %}
                                     <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 </div>
                                 <div class="form-group">
                                     {{ form.firstSurname.label(class="form-control-label") }}
                                     {{ form.firstSurname(class="form-control") }}
-                                    {% for error in form.username.errors %}
+                                    {% for error in form.firstSurname.errors %}
                                     <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 </div>
                                 <div class="form-group">
                                     {{ form.secondSurname.label(class="form-control-label") }}
                                     {{ form.secondSurname(class="form-control") }}
-                                    {% for error in form.username.errors %}
+                                    {% for error in form.secondSurname.errors %}
                                     <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 </div>
                                 <div class="form-group">
                                     {{ form.role.label(class="form-control-label") }}
                                     {{ form.role(class="form-control") }}
-                                    {% for error in form.username.errors %}
+                                    {% for error in form.role.errors %}
                                     <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 </div>

@@ -3,6 +3,7 @@ from wtforms import StringField, PasswordField, SubmitField, BooleanField, DateF
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length, Regexp, Optional, NumberRange # Importa Regexp
 from app.auth.models import Persona
 from app import db # Necesario para las validaciones personalizadas
+from app.repositories import SQLUserRepository
 
 
 class RegistrationForm(FlaskForm):
@@ -26,12 +27,14 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Registrar usuario', render_kw={"class": "btn btn-primary confirm-submit-btn col-md-6"})
 
     def validate_username(self, username):
-        user = Persona.query.filter_by(username=username.data).first()
+        user_repository = SQLUserRepository()
+        user = user_repository.find_by_username(username.data)
         if user is not None:
             raise ValidationError('Por favor, elige un nombre de usuario diferente.')
 
     def validate_email(self, email):
-        user = Persona.query.filter_by(email=email.data).first()
+        user_repository = SQLUserRepository()
+        user = user_repository.find_by_email(email.data)
         if user is not None:
             raise ValidationError('Este correo electrónico ya está registrado.')
 
@@ -47,7 +50,8 @@ class RequestResetPasswordForm(FlaskForm):
     submit = SubmitField('Solicitar Restablecimiento de Contraseña')
 
     def validate_email(self, email):
-        user = Persona.query.filter_by(email=email.data).first()
+        user_repository = SQLUserRepository()
+        user = user_repository.find_by_email(email.data)
         if user is None:
             # No revelar si el correo existe o no por seguridad, simplemente un mensaje genérico.
             # O podrías poner un mensaje más específico si prefieres.
@@ -119,15 +123,15 @@ class UserEditForm(FlaskForm):
         self.original_email = original_email
 
     def validate_username(self, username):
-        from sqlalchemy import select # Importar dentro de la función para evitar problemas de importación circular si es el caso
         if username.data != self.original_username:
-            user = db.session.execute(select(Persona).filter_by(username=username.data)).scalar_one_or_none()
+            user_repository = SQLUserRepository()
+            user = user_repository.find_by_username(username.data)
             if user:
                 raise ValidationError('El nombre de usuario seleccionado ya existe, por favor ingrese otro nombre de usuario.')
 
     def validate_email(self, email):
-        from sqlalchemy import select # Importar dentro de la función
         if email.data != self.original_email:
-            user = db.session.execute(select(Persona).filter_by(email=email.data)).scalar_one_or_none()
+            user_repository = SQLUserRepository()
+            user = user_repository.find_by_email(email.data)
             if user:
                 raise ValidationError('El email seleccionado ya existe, por favor ingrese otro email.')

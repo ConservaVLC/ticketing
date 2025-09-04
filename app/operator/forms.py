@@ -3,6 +3,7 @@ from wtforms import TextAreaField, SelectField, SubmitField
 from wtforms.validators import DataRequired, Length, Optional
 from app import db 
 from ..models import Status
+from app.repositories import SQLStatusRepository
 
 class OperatorTicketForm(FlaskForm):
     # Campo para cambiar el estado del ticket
@@ -15,7 +16,8 @@ class OperatorTicketForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(OperatorTicketForm, self).__init__(*args, **kwargs)
+        status_repository = SQLStatusRepository()
         # Poblar las opciones del SelectField 'status'
         # Podrías filtrar aquí los estados que un operador puede seleccionar (ej. no a 'Cerrado' directamente desde 'Pendiente')
-        valid_statuses = db.session.execute(db.select(Status)).scalars().all()
+        valid_statuses = status_repository.get_all()
         self.status.choices = [(s.id, s.name) for s in valid_statuses]

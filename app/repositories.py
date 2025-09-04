@@ -1,7 +1,8 @@
 from app import db
 from app.auth.models import Persona, Role
-from app.models import Category, Ticket
+from app.models import Category, Ticket, Status, TicketHistory
 from sqlalchemy import or_, select, func
+from app.utils import get_filtered_tickets_query
 
 # -----------------------------------------------
 # INTERFACES DE REPOSITORIO
@@ -24,6 +25,18 @@ class UserRepository:
     def add(self, user):
         raise NotImplementedError
 
+    def save(self, user):
+        raise NotImplementedError
+
+    def find_supervisors_by_username_and_role(self, usernames, role_ids):
+        raise NotImplementedError
+
+    def find_by_username(self, username):
+        raise NotImplementedError
+
+    def find_by_role_ids(self, role_ids):
+        raise NotImplementedError
+
 class RoleRepository:
     """Define el contrato para operaciones de datos de roles."""
     def get_all_ordered_by_name(self):
@@ -43,6 +56,9 @@ class CategoryRepository:
     def find_by_value_and_not_id(self, value, category_id):
         raise NotImplementedError
 
+    def find_by_name(self, name):
+        raise NotImplementedError
+
     def add(self, category):
         raise NotImplementedError
 
@@ -50,6 +66,40 @@ class CategoryRepository:
         raise NotImplementedError
         
     def get_associated_ticket_count(self, category_id):
+        raise NotImplementedError
+
+class StatusRepository:
+    """Define el contrato para operaciones de datos de estados."""
+    def find_by_value(self, value):
+        raise NotImplementedError
+
+    def get_all(self):
+        raise NotImplementedError
+
+    def find_by_id(self, status_id):
+        raise NotImplementedError
+
+class TicketRepository:
+    """Define el contrato para operaciones de datos de tickets."""
+    def add(self, ticket):
+        raise NotImplementedError
+
+    def find_by_id(self, ticket_id):
+        raise NotImplementedError
+
+    def find_by_id_and_creator(self, ticket_id, creator_id):
+        raise NotImplementedError
+
+    def get_filtered_tickets(self, form, filter_by_user_role):
+        raise NotImplementedError
+        
+    def save(self, ticket):
+        raise NotImplementedError
+
+
+class TicketHistoryRepository:
+    """Define el contrato para operaciones de datos de historial de tickets."""
+    def find_by_ticket_id(self, ticket_id):
         raise NotImplementedError
 
 # -----------------------------------------------
@@ -72,6 +122,20 @@ class SQLUserRepository(UserRepository):
 
     def add(self, user):
         db.session.add(user)
+
+    def save(self, user):
+        db.session.add(user)
+
+    def find_supervisors_by_username_and_role(self, usernames, role_ids):
+        return db.session.execute(
+            select(Persona).filter(Persona.username.in_(usernames),
+                                 Persona.role_id.in_(role_ids))).scalars().all()
+
+    def find_by_username(self, username):
+        return Persona.query.filter_by(username=username).first()
+
+    def find_by_role_ids(self, role_ids):
+        return db.session.execute(select(Persona).filter(Persona.role_id.in_(role_ids))).scalars().all()
 
 class SQLRoleRepository(RoleRepository):
     """Implementación concreta del repositorio de roles para SQLAlchemy."""
@@ -97,6 +161,9 @@ class SQLCategoryRepository(CategoryRepository):
             )
         ).scalar_one_or_none()
 
+    def find_by_name(self, name):
+        return db.session.execute(select(Category).filter_by(name=name)).scalar_one_or_none()
+
     def add(self, category):
         db.session.add(category)
 
@@ -107,3 +174,46 @@ class SQLCategoryRepository(CategoryRepository):
         return db.session.execute(
             select(func.count(Ticket.id)).filter(Ticket.category_id == category_id)
         ).scalar()
+
+class SQLStatusRepository(StatusRepository):
+    """Implementación concreta del repositorio de estados para SQLAlchemy."""
+    def find_by_value(self, value):
+        return db.session.execute(select(Status).filter_by(value=value)).scalar_one_or_none()
+
+    def get_all(self):
+        return db.session.execute(select(Status)).scalars().all()
+
+    def find_by_id(self, status_id):
+        return db.session.execute(select(Status).filter_by(id=status_id)).scalar_one_or_none()
+
+class SQLTicketRepository(TicketRepository):
+    """Implementación concreta del repositorio de tickets para SQLAlchemy."""
+    def add(self, ticket):
+        db.session.add(ticket)
+
+    def find_by_id(self, ticket_id):
+        return db.session.execute(select(Ticket).filter_by(id=ticket_id)).scalar_one_or_none()
+
+    def find_by_id_and_creator(self, ticket_id, creator_id):
+        return db.session.execute(
+            select(Ticket).filter_by(id=ticket_id, creator_id=creator_id)
+        ).scalar_one_or_none()
+
+    def get_filtered_tickets(self, form, filter_by_user_role):
+        query = get_filtered_tickets_query(form=form, filter_by_user_role=filter_by_user_role)
+        return db.session.execute(
+            query.order_by(Ticket.timestamp.desc())
+        ).scalars().all()
+        
+    def save(self, ticket):
+        db.session.add(ticket)
+
+
+class SQLTicketHistoryRepository(TicketHistoryRepository):
+    """Implementación concreta del repositorio de historial de tickets para SQLAlchemy."""
+    def find_by_ticket_id(self, ticket_id):
+        return db.session.execute(
+            select(TicketHistory)
+            .filter_by(ticket_id=ticket_id)
+            .order_by(TicketHistory.change_timestamp.desc())
+        ).scalars().all()

@@ -26,31 +26,7 @@ def log_email_send_error(recipient_email, subject, error_message, exc_info=False
         exc_info=exc_info
     )
 
-def get_ticket_attributes_for_history(ticket_obj):
-    """
-    Retorna un diccionario con los valores de los atributos clave de un objeto Ticket
-    que son relevantes para el registro de historial.
-    Esto ayuda a evitar la repetición al capturar old_values y new_values.
-    """
-    if not ticket_obj:
-        return {
-            'category_id': None,
-            'status_id': None,
-            'description': None,
-            'observation': None,
-            'asignated_supervisor_id': None,
-            'asigned_operator_id': None,
-        }
 
-    return {
-        'category_id': ticket_obj.category_id,
-        'status_id': ticket_obj.status_id,
-        'description': ticket_obj.description,
-        'observation': ticket_obj.observation,
-        'asignated_supervisor_id': ticket_obj.asignated_supervisor_id,
-        'asigned_operator_id': ticket_obj.asigned_operator_id,
-        # Asegúrate de que esta lista coincida con el 'field_map' en log_ticket_change
-    }
 
 def get_ticket_attributes_for_history(ticket):
     """
@@ -97,6 +73,9 @@ def log_ticket_change(
 
     prev_observation_val = old_values.get('observation')
     new_observation_val = new_values.get('observation')
+    if prev_observation_val == new_observation_val and 'observation' in old_values:
+        prev_observation_val = None
+        new_observation_val = None
 
     # Determinar si el campo realmente cambió, para evitar guardar "N/A -> N/A"
     prev_category_id_val = old_values.get('category_id')

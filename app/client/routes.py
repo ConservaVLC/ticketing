@@ -7,13 +7,20 @@ from sqlalchemy.exc import SQLAlchemyError
 from .forms import RejectTicketForm, TicketForm, ClientDescriptionForm
 from ..models import Ticket, Status, Category
 from app.supervisor.forms import TicketFilterForm
-from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email, get_filtered_tickets_query
+from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email
 from app.auth.models import Persona
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
 from app.auth.decorators import client_required
 import logging
+from app.repositories import SQLTicketRepository, SQLStatusRepository, SQLCategoryRepository, SQLUserRepository
+
+# Instantiate repositories
+ticket_repository = SQLTicketRepository()
+status_repository = SQLStatusRepository()
+category_repository = SQLCategoryRepository()
+user_repository = SQLUserRepository()
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +34,7 @@ def create_ticket():
     form = TicketForm()
     if form.validate_on_submit():
         try:
-            selected_category = db.session.execute(db.select(Category).filter_by(value=form.category.data)).scalar_one_or_none()
+            selected_category = category_repository.find_by_value(form.category.data)
             
             if not selected_category:
                 flash('Categoría seleccionada no válida.', 'error')
@@ -35,7 +42,7 @@ def create_ticket():
 
             # Obtén el objeto Status correspondiente a 'pending'
             # Asegúrate de que 'pending' exista en tu tabla Status y tenga el ID correcto.  
-            pending_status = db.session.execute(db.select(Status).filter_by(value='pending')).scalar_one_or_none()
+            pending_status = status_repository.find_by_value('pending')
                      
             # Si no se encuentra 'pending', podrías lanzar un error o usar un ID por defecto seguro (ej. 1)
             # Aunque tu modelo ya tiene default=1, es buena práctica ser explícito aquí.
@@ -43,9 +50,10 @@ def create_ticket():
                 flash('Error: El estado inicial "Pendiente" no se encontró en la base de datos.', 'error')
                 return render_template('client/create_ticket.html', title='Crear Ticket', form=form)
 
-            supervisores_en_db = db.session.execute(
-                select(Persona).filter(Persona.username.in_(['lrguardamagna.etra@grupoetra.com', 'lrguardamagna.etra@grupoetra.com', 'lrguardamagna.etra@grupoetra.com']),
-                                     Persona.role_id.in_([1,4,9]))).scalars().all()
+            supervisores_en_db = user_repository.find_supervisors_by_username_and_role(
+                usernames=['lrguardamagna.etra@grupoetra.com', 'lrguardamagna.etra@grupoetra.com', 'lrguardamagna.etra@grupoetra.com'],
+                role_ids=[1, 4, 9]
+            )
             
             supervisores_map = {s.username: s for s in supervisores_en_db}
 
@@ -87,7 +95,7 @@ def create_ticket():
                 asigned_operator_id=asigned_operator.id if asigned_operator else None
             )
             
-            db.session.add(new_ticket)
+            ticket_repository.add(new_ticket)
             db.session.flush()
             
 
@@ -161,12 +169,8 @@ def client_tickets():
 
     # Usa la función de utilidad, pasándole el formulario.
     
-    query = get_filtered_tickets_query(form=form, filter_by_user_role=True) 
+    tickets = ticket_repository.get_filtered_tickets(form=form, filter_by_user_role=True) 
     
-    tickets = db.session.execute(
-        query.order_by(Ticket.timestamp.desc())
-    ).scalars().all()
-
     logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó sus tickets. Se encontraron {len(tickets)} tickets.')
     
     # El `if not tickets` y el `flash` para "Ticket no encontrado" que tenías
@@ -192,9 +196,7 @@ def client_tickets():
 @login_required
 @client_required
 def client_manage_completed_ticket(ticket_id):
-    ticket = db.session.execute(
-        select(Ticket).filter_by(id=ticket_id, creator_id=current_user.id)
-    ).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id_and_creator(ticket_id, current_user.id)
 
     if not ticket:
         flash('Ticket no encontrado o no tienes permiso para gestionarlo.', 'danger')
@@ -214,7 +216,7 @@ def client_manage_completed_ticket(ticket_id):
 
         try:
             # 1. Cambiar el estado a 'Rechazado'
-            rejected_status = db.session.execute(select(Status).filter_by(value='rejected')).scalar_one_or_none()
+            rejected_status = status_repository.find_by_value('rejected')
             if rejected_status:
                 ticket.status_id = rejected_status.id
             else:
@@ -238,7 +240,7 @@ def client_manage_completed_ticket(ticket_id):
                 change_details=form.note.data
             )
             
-            db.session.add(ticket) # Añadimos el ticket modificado a la sesión
+            ticket_repository.save(ticket) # Añadimos el ticket modificado a la sesión
             db.session.commit()
 
             # --- Logger: INFO - Ticket rechazado con éxito ---
@@ -297,7 +299,7 @@ def client_manage_completed_ticket(ticket_id):
 @login_required
 @client_required
 def client_add_description(ticket_id):
-    ticket = db.session.execute(db.select(Ticket).filter_by(id=ticket_id)).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id(ticket_id)
     
     old_values = get_ticket_attributes_for_history(ticket)
 
@@ -328,7 +330,7 @@ def client_add_description(ticket_id):
                 change_details=f"Nota del cliente: {new_text}", # Aquí va la nota del cliente
             )
 
-            db.session.add(ticket)
+            ticket_repository.save(ticket)
             db.session.commit()
 
             # --- Logger: INFO - Ticket rechazado con éxito ---
@@ -359,9 +361,7 @@ def client_add_description(ticket_id):
 @login_required
 @client_required # Solo el cliente puede cerrar sus propios tickets
 def close_ticket(ticket_id):
-    ticket = db.session.execute(
-        select(Ticket).filter_by(id=ticket_id, creator_id=current_user.id)
-    ).scalar_one_or_none()
+    ticket = ticket_repository.find_by_id_and_creator(ticket_id, current_user.id)
 
     if not ticket:
         flash('Ticket no encontrado o no tienes permiso para cerrarlo.', 'danger')
@@ -378,7 +378,7 @@ def close_ticket(ticket_id):
 
     try:
         # Obtener el objeto Status para 'closed'
-        closed_status = db.session.execute(select(Status).filter_by(value='closed')).scalar_one_or_none()
+        closed_status = status_repository.find_by_value('closed')
         if closed_status:
             ticket.status_id = closed_status.id
             
@@ -408,7 +408,7 @@ def close_ticket(ticket_id):
                 new_values=new_values
             )
 
-            db.session.add(ticket) # Añadimos el ticket modificado a la sesión
+            ticket_repository.save(ticket) # Añadimos el ticket modificado a la sesión
             db.session.commit()
 
              # --- Logger: INFO - Ticket cerrado con éxito ---

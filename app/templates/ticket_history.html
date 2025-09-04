@@ -158,7 +158,7 @@
                     {% endif %}
 
                     {# Mostrar cambios en la observación, omitiendo la inicial si es de 'None' #}
-                    {% if record.previous_observation and record.previous_observation != record.new_observation %}
+                    {% if record.previous_observation != record.new_observation %}
                         <p class="mt-2 mb-1 text-muted">
                             <i class="fas fa-comment-dots"></i> Observación (anterior): <br>
                             <small><span class="pre-wrap-text">{{ record.previous_observation | default('') | safe }}</span></small>

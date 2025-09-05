@@ -9,6 +9,7 @@ class Config:
     # ¡IMPORTANTE! En producción, asegúrate de que SECRET_KEY se cargue desde una variable de entorno segura.
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess' # For development only. MUST be set in production!
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {'pool_pre_ping': True}
 
     # La URL de la base de datos, optimizada para Cloud Run
     # Cloud Run usa un proxy de conexión, por lo que necesita el nombre de conexión de la instancia
@@ -41,7 +42,7 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME') # Tu dirección de correo
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') # Tu contraseña de correo o contraseña de aplicación
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
-    ADMINS = os.environ.get('ADMIN_EMAILS', '').split(',') # Para errores o notificaciones
+    ADMINS = os.environ.get('ADMINS', '').split(',') # Para errores o notificaciones
 
 class DevelopmentConfig(Config):
     DEBUG = True

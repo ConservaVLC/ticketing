@@ -1,9 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import TextAreaField, SelectField, SubmitField, StringField, DateField
 from wtforms.validators import DataRequired, Length, Optional
-from app import db 
-from ..models import Status, Category
-from app.auth.models import Persona
+from app.repositories import SQLCategoryRepository, SQLStatusRepository, SQLUserRepository
 
 
 # --- Formulario para EDITAR/GESTIONAR un Ticket existente ---
@@ -25,22 +23,25 @@ class TicketEditForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(TicketEditForm, self).__init__(*args, **kwargs)
+        category_repository = SQLCategoryRepository()
+        status_repository = SQLStatusRepository()
+        user_repository = SQLUserRepository()
         
         # Poblar opciones para la Categoría
-        categories = db.session.execute(db.select(Category)).scalars().all()
+        categories = category_repository.get_all()
         self.category.choices = [(c.id, c.name) for c in categories]
 
         # Poblar opciones para el Estado
-        statuses = db.session.execute(db.select(Status)).scalars().all()
+        statuses = status_repository.get_all()
         self.status.choices = [(s.id, s.name) for s in statuses]
         
         # Poblar opciones para el Supervisor (filtrar por rol 'supervisor'(4) o 'admin'(1))
-        supervisors = db.session.execute(db.select(Persona).filter(Persona.role_id.in_([1, 4]))).scalars().all()
+        supervisors = user_repository.find_by_role_ids([1, 4])
         self.supervisor.choices = [(p.id, p.username) for p in supervisors]
         self.supervisor.choices.insert(0, (0, '--- Sin Supervisor Asignado ---')) # Opción para desasignar o no asignar
         
         # Poblar opciones para el Operador (filtrar por rol 'operator'(6) o 'cliente'(11))
-        operators = db.session.execute(db.select(Persona).filter(Persona.role_id.in_([6,11]))).scalars().all()
+        operators = user_repository.find_by_role_ids([6, 11])
         self.operator.choices = [(p.id, p.username) for p in operators]
         self.operator.choices.insert(0, (0, '--- Sin Operador Asignado ---')) # Opción para desasignar o no asignar
 
@@ -53,14 +54,13 @@ class AssignTicketForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(AssignTicketForm, self).__init__(*args, **kwargs)
+        user_repository = SQLUserRepository()
         # Poblar las opciones del SelectField con usuarios de la base de datos
         # Puedes filtrar por rol si solo quieres asignar a 'operadores' o 'usuarios'
         # Por ahora, traeremos todos los usuarios (excepto supervisores y admins si quieres)
         
         # Ejemplo: traer solo usuarios con rol 'user' u 'operator'
-        users = db.session.execute(
-            db.select(Persona).filter(Persona.role_id.in_([4, 6])) # Ajusta los roles según tu necesidad
-        ).scalars().all()
+        users = user_repository.find_by_role_ids([4, 6]) # Ajusta los roles según tu necesidad
         
         # Las opciones deben ser una lista de tuplas: (valor, etiqueta)
         # El valor será el ID del usuario, la etiqueta será su nombre de usuario o nombre completo
@@ -86,9 +86,3 @@ class TicketFilterForm(FlaskForm):
     # Mantenemos los botones de acción del formulario
     submit = SubmitField('Aplicar Filtros')
     clear_filters = SubmitField('Limpiar Filtros')
-
-
-
-            
-
-

@@ -1,7 +1,7 @@
 from app import db # Ahora 'db' apunta a la instancia de SQLAlchemy de tu app principal
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin # No importamos current_app aquí
-from itsdangerous import Serializer
+from itsdangerous import URLSafeTimedSerializer as TimedSerializer
 from flask import current_app
 from sqlalchemy import Numeric
 
@@ -44,21 +44,17 @@ class Persona(db.Model, UserMixin): # Asumo que Persona es tu modelo de usuario 
 
     # --- Métodos para Recuperación de Contraseña ---
     def get_reset_password_token(self, expires_in=600):
-        # Mantenemos la codificación de la SECRET_KEY a bytes
-        s = Serializer(current_app.config['SECRET_KEY'].encode('utf-8'))
-        # CAMBIO CLAVE: Eliminamos .decode('utf-8') porque s.dumps() ya devuelve una cadena (str)
+        s = TimedSerializer(current_app.config['SECRET_KEY'])
         return s.dumps({'user_id': self.id})
 
     @staticmethod
-    def verify_reset_password_token(token):
-        # Mantenemos la codificación de la SECRET_KEY a bytes
-        s = Serializer(current_app.config['SECRET_KEY'].encode('utf-8'))
+    def verify_reset_password_token(token, expires_in=600):
+        s = TimedSerializer(current_app.config['SECRET_KEY'])
         try:
-            # Seguimos codificando el token de entrada a bytes, ya que loads() espera bytes
-            data = s.loads(token.encode('utf-8'))
+            data = s.loads(token, max_age=expires_in)
         except:
             return None # El token es inválido o ha expirado
-        return Persona.query.get(data['user_id']) # Retorna el usuario si el token es válido
+        return Persona.query.get(data['user_id'])
 
     def __repr__(self):
         return '<User {}>'.format(self.username)

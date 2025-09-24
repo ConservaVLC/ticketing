@@ -8,23 +8,15 @@
         <h1 class="my-4">{{ title }}</h1>
         <hr>
 
-        <p><strong>ID del Ticket:</strong> {{ ticket.id }}</p>
+        <p><strong>ID del Ticket:</strong> {{ ticket._id | string }}</p>
         <p><strong>Título:</strong> {{ ticket.title }}</p>
-        <p><strong>Categoría:</strong> {{ ticket.category_obj.name }}</p>
+        <p><strong>Categoría:</strong> {{ category_map[ticket.category_value] }}</p>
         <p><strong>Estado Actual:</strong> 
-            {% if ticket.status_obj %}
-                {% set status_class = '' %}
-                {% if ticket.status_obj.value == 'cancelled' %}
-                    {% set status_class = 'bg-danger' %}
-                {% elif ticket.status_obj.value == 'completed' %}
-                    {% set status_class = 'bg-success' %}
-                {% else %}
-                    {% set status_class = 'bg-secondary' %}
-                {% endif %}
-                <span class="badge rounded-pill {{ status_class }}">{{ ticket.status_obj.name }}</span>
-            {% else %}
-                <span class="badge rounded-pill bg-secondary">Desconocido</span>
-            {% endif %}
+            {% set status_class = {
+                'cancelled': 'bg-danger',
+                'completed': 'bg-success'
+            }.get(ticket.status_value, 'bg-secondary') %}
+            <span class="badge rounded-pill {{ status_class }}">{{ status_map[ticket.status_value] }}</span>
         </p>
         <p><strong>Descripción:</strong> {{ ticket.description }}</p>
         {# Opcional: Mostrar notas internas para el cliente si aplica #}
@@ -38,19 +30,19 @@
         {% endif %}
         
             <div class="d-flex justify-content-center">
-                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket.id) }}" class="btn btn-outline-secondary col-md-10">
+                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket._id | string) }}" class="btn btn-outline-secondary col-md-10">
                         <i class="fas fa-history"></i> Ver Historial
                 </a>
             </div>
         <hr class="my-4">
 
         <h3>Acciones del Cliente</h3>
-        <p>El operador ha marcado este ticket como **{{ ticket.status_obj.name }}**.</p>
+        <p>El operador ha marcado este ticket como **{{ status_map[ticket.status_value] }}**.</p>
         <p>Por favor, decide si el trabajo está completado a tu satisfacción o si necesitas rechazarlo.</p>
 
         <div class="d-flex justify-content-center gap-3 mt-4">
             {# Botón para Cerrar el Ticket #}
-            <form action="{{ url_for('client_bp.close_ticket', ticket_id=ticket.id) }}" method="POST" class="col-md-12">
+            <form action="{{ url_for('client_bp.close_ticket', ticket_id=ticket._id | string) }}" method="POST" class="col-md-12">
                 {{ form.csrf_token }} {# Usamos el token del formulario de rechazo para seguridad #}
                 <button type="submit" class="btn btn-info close-ticket-confirm-btn">Cerrar Ticket</button>
             </form>
@@ -59,7 +51,7 @@
             {# Formulario para Rechazar el Ticket #}
             <div class="card p-3 flex-grow-1">
                 <h5 class="card-title">Rechazar Ticket</h5>
-                <form method="POST" action="{{ url_for('client_bp.client_manage_completed_ticket', ticket_id=ticket.id) }}">
+                <form method="POST" action="{{ url_for('client_bp.client_manage_completed_ticket', ticket_id=ticket._id | string) }}">
                     {{ form.csrf_token }}
                     <div class="mb-3">
                         {{ form.note.label(class="form-label") }}

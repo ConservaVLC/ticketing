@@ -1,17 +1,14 @@
-{# app/ticket_management/templates/tickets/my_tickets.html #}
-
 {% extends "base.html" %}
 
-{% block title %} Mis ticket {% endblock %}
+{% block title %} Mis Tickets {% endblock %}
 
 {% block head_extra %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {# CDN de Font Awesome para la lupa: #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {% endblock %}
 
 {% block content %}
-    <div class="container-flex">
+    <div class="container-fluid">
         <h1>Mis Tickets de Orden de Trabajo</h1>
         <hr>
 
@@ -20,81 +17,25 @@
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        {# FILTROS: Una fila dedicada para los campos de búsqueda #}
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.ticket_id(class="form-control", placeholder=form.ticket_id.label.text) }}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por ID">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
+                        {# --- FILTROS --- #}
+                        <td>{{ form.ticket_id(class="form-control form-control-sm", placeholder="ID") }}</td>
+                        <td>{{ form.search_title(class="form-control form-control-sm", placeholder="Título") }}</td>
+                        <td>{{ form.category(class="form-select form-select-sm") }}</td>
+                        <td>{{ form.status(class="form-select form-select-sm") }}</td>
+                        <td>{{ form.start_date(class="form-control form-control-sm", type="date") }}</td>
+                        <td>{{ form.end_date(class="form-control form-control-sm", type="date") }}</td>
+                        <td class="text-center">
+                            <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                            <a href="{{ url_for('client_bp.client_tickets') }}" class="btn btn-sm btn-secondary">Limpiar</a>
                         </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.search_title(class="form-control", placeholder=form.search_title.label.text) }}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar en Título">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.category_name(class="form-control", placeholder=form.category_name.label.text) }}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por categoría">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.status_name(class="form-control", placeholder=form.status_name.label.text) }}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por estado">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.supervisor_username(class="form-control", placeholder=form.supervisor_username.label.text) }}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por supervisor">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.operator_username(class="form-control", placeholder=form.operator_username.label.text) }}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Buscar por operador">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.start_date(class="form-control", type="date", placeholder="Fecha Desde") }} {# Usar placeholder directo aquí para evitar label.text si el label es largo #}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Fecha Desde">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                {{ form.end_date(class="form-control", type="date", placeholder="Fecha Hasta") }} {# Usar placeholder directo #}
-                                <button class="btn btn-outline-secondary" type="submit" aria-label="Fecha Hasta">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                        {# Columna para el botón de limpiar filtros #}
-                        <td>{{ form.clear_filters(class="btn btn-outline-secondary text-center") }}</td>
                     </tr>
                     <tr>
                         <th>ID</th>
                         <th>Categoría</th>
                         <th>Título</th>
                         <th>Estado</th>
-                        <th>Supervisor asignado</th>
-                        <th>Operador asignado</th>
+                        <th>Supervisor</th>
+                        <th>Operador</th>
                         <th>Fecha de Creación</th>
                         <th>Última Modificación</th>
                         <th class="text-center">Acciones</th>
@@ -103,57 +44,35 @@
                 <tbody>
                     {% for ticket in tickets %}
                     <tr>
-                        <td>{{ ticket.id }}</td>
-                        <td>{{ ticket.category_obj.name }}</td>
-                        <td>{{ ticket.title | truncate(50, True, '...') }}</td> {# Trunca la descripción si es muy larga #}
+                        <td>{{ ticket._id | string | truncate(8, True, '...') }}</td>
+                        <td>{{ ticket.category_value | replace('-', ' ') | title }}</td>
+                        <td>{{ ticket.title | truncate(50, True, '...') }}</td>
                         <td>
-                            {% if ticket.status_obj %}
-                                {% set status_class = '' %}
-                                {% if ticket.status_obj.value == 'cancelled' %}
-                                    {% set status_class = 'bg-danger' %}
-                                {% elif ticket.status_obj.value == 'in_progress' %}
-                                    {% set status_class = 'bg-warning text-dark' %}
-                                {% elif ticket.status_obj.value == 'closed' %}
-                                    {% set status_class = 'bg-primary' %}
-                                {% elif ticket.status_obj.value == 'completed' %}
-                                    {% set status_class = 'bg-success' %}
-                                {% elif ticket.status_obj.value == 'pending' %}
-                                    {% set status_class = 'bg-orange' %}
-                                {% else %}
-                                    {% set status_class = 'bg-secondary' %} {# Fallback #}
-                                {% endif %}
-                                <span class="badge badge-status {{ status_class }}">{{ ticket.status_obj.name }}</span>
-                            {% else %}
-                                <span class="badge badge-status bg-secondary">Desconocido</span>
-                            {% endif %}
+                            {% set status_class = {
+                                'cancelled': 'bg-danger',
+                                'in_progress': 'bg-warning text-dark',
+                                'closed': 'bg-primary',
+                                'completed': 'bg-success',
+                                'pending': 'bg-orange',
+                                'rejected': 'bg-dark'
+                            }.get(ticket.status_value, 'bg-secondary') %}
+                            <span class="badge badge-status {{ status_class }}">{{ status_map.get(ticket.status_value, ticket.status_value | replace('_', ' ') | title) }}</span>
                         </td>
-                                                <td>
-                            {% if ticket.asignated_supervisor_obj %}
-                                {{ ticket.asignated_supervisor_obj.username }}
-                            {% else %}
-                                --- Sin asignar ---
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if ticket.asigned_operator_obj %}
-                                {{ ticket.asigned_operator_obj.username }}
-                            {% else %} 
-                                --- Sin asignar ---
-                            {% endif %}
-                        </td>
-                        <td>{{ ticket.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td>{{ ticket.modified_timestamp.strftime('%d/%m/%Y %H:%M') if ticket.modified_timestamp else 'N/A' }}</td>
+                        <td>{{ ticket.supervisor.username if ticket.supervisor else '---' }}</td>
+                        <td>{{ ticket.operator.username if ticket.operator else '---' }}</td>
+                        <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') if ticket.created_at else 'N/A' }}</td>
+                        <td>{{ ticket.updated_at.strftime('%d/%m/%Y %H:%M') if ticket.updated_at else 'N/A' }}</td>
                         <td class="text-center">
-                            {# Botón "Gestionar Ticket" solo para Completado o Cancelado #}
-                            {% if ticket.status_obj and (ticket.status_obj.value == 'completed' or ticket.status_obj.value == 'cancelled') %}
-                            <a href="{{ url_for('client_bp.client_manage_completed_ticket', ticket_id=ticket.id) }}" class="btn btn-sm btn-info m-2 col-md-8">Gestionar Ticket</a>
+                            {% if ticket.status_value in ['completed', 'cancelled'] %}
+                                <a href="{{ url_for('client_bp.client_manage_completed_ticket', ticket_id=ticket._id | string) }}" class="btn btn-sm btn-info m-2">Gestionar</a>
                             {% endif %}
-                            <a href="{{ url_for('client_bp.client_add_description', ticket_id=ticket.id) }}" class="btn btn-sm btn-warning m-2 col-md-8">Ver/Editar</a>
+                            <a href="{{ url_for('client_bp.client_add_description', ticket_id=ticket._id | string) }}" class="btn btn-sm btn-warning m-2">Ver/Editar</a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </form>
         {% else %}
             <p>No has cargado ningún ticket todavía.</p>
             <a href="{{ url_for('client_bp.create_ticket') }}" class="btn btn-primary">Crear Nuevo Ticket</a>

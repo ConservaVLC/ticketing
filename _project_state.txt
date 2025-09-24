@@ -1,0 +1,26 @@
+Project State: New Strategy - SQL within Container for GCP Free Tier.
+
+Core Principle: Optimize for GCP free tier by running a SQL database directly within the application container. Data persistence is a key challenge to address.
+
+Goal: Deploy the Flask application with an in-container SQL database (likely SQLite) on GCP, ensuring data persistence while minimizing costs.
+
+Current Phase: Phase 1 - Database Selection and Persistence Strategy.
+
+Next Steps:
+
+1.  **Choose In-Container SQL Database:**
+    *   **Action:** Decide between SQLite (simpler, file-based) and a full SQL server (e.g., MySQL/PostgreSQL, more complex setup within container). SQLite is recommended for simplicity and free-tier compatibility.
+    *   **Verification:** User confirms choice.
+
+2.  **Address Data Persistence for In-Container SQL:**
+    *   **Challenge:** Standard Cloud Run containers are ephemeral; data written to the local filesystem is lost on restart.
+    *   **Options for Persistence (if SQLite is chosen):**
+        *   **Cloud Storage FUSE:** Mount a Cloud Storage bucket as a filesystem. This adds complexity and potential latency.
+        *   **Cloud SQL (External):** The original setup, but user wants to avoid for cost.
+        *   **No Persistence:** Accept that data will be reset on container restart (unlikely for a ticketing system).
+    *   **Action:** Discuss and decide on a persistence strategy.
+    *   **Verification:** User confirms persistence strategy.
+
+3.  **Refactor Application for Chosen Database and Persistence:**
+    *   **Action:** Based on decisions in steps 1 and 2, refactor `config.py`, `app/__init__.py`, and `app/models.py` to use the chosen SQL database (e.g., SQLite) and implement the persistence mechanism.
+    *   **Verification:** Application runs locally with persistence, and then deployed to GCP.

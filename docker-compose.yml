@@ -1,71 +1,35 @@
-# docker-compose.yml
-services:
-  # --- Servicio de Base de Datos MySQL ---
-  tickets_db:
-    image: mysql:8.0 # Utiliza la imagen oficial de MySQL versión 8.0
-    container_name: tickets_mysql_db # Un nombre fácil de recordar para el contenedor MySQL
+version: '3.8'
 
-    env_file:
-      - ./.env.docker
-  
+services:
+  # --- Servicio de MongoDB (sin autenticación) ---
+  mongo:
+    image: mongo:latest
+    container_name: tickets_mongo_db
     ports:
-      - "3306:3306" # Mapea el puerto 3306 del contenedor (MySQL) al puerto 3306 de tu máquina local.
-                   # Esto es útil si quieres acceder a la DB desde tu máquina local (ej. con MySQL Workbench).
+      - "27017:27017"
     volumes:
-      - mysql_data:/var/lib/mysql # ¡CRÍTICO! Monta un volumen persistente para los datos de MySQL.
-                                  # Esto evita que tus datos se pierdan al detener/eliminar el contenedor 'db'.
-    healthcheck: # Opcional pero muy recomendado: verifica que la DB esté completamente lista
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 10s # Chequea cada 10 segundos
-      timeout: 5s   # Espera 5 segundos por respuesta
-      retries: 5    # Reintenta 5 veces antes de fallar
+      - mongo_data:/data/db
 
   # --- Servicio de tu Aplicación Flask ---
   tickets_web:
-    build: . # Docker Compose buscará un Dockerfile en el directorio actual para construir la imagen de tu app
-    container_name: tickets # Un nombre fácil de recordar para el contenedor de tu app
+    build: .
+    container_name: tickets
     ports:
-      - "5000:5000" # Mapea el puerto 5000 del contenedor (Flask/Gunicorn) al puerto 5000 de tu máquina local
+      - "5000:5000"
     volumes:
-      # ¡Volúmenes de enlace de montaje (Bind Mounts) para desarrollo!
-      # Monta tu código fuente local en el contenedor. Los cambios que hagas se reflejarán instantáneamente.
-      - ./:/app # Monta la carpeta 'app' de tu host en '/app/app' del contenedor
-      #- ./run.py:/app/run.py # Monta 'run.py' de tu host en '/app/run.py' del contenedor
-      #- ./config.py:/app/config.py # Monta 'config.py' de tu host en '/app/config.py' del contenedor
-      # No es necesario montar la carpeta 'instance' para SQLite ya que ahora es MySQL externa.
-    env_file:
-      - ./.env.docker     
-    
+      - ./:/app
     environment:
       - FLASK_ENV=development
       - FLASK_APP=app
       - PYTHONUNBUFFERED=1
       - FLASK_DEBUG=1
-
+      # La aplicación se conectará a esta URI, sin usuario/contraseña
+      - MONGO_URI=mongodb://mongo:27017/ticketing_db
     depends_on:
-      tickets_db:
-        condition: service_healthy # Asegura que 'web' solo arranque cuando 'db' esté completamente lista
-    command: flask run --host=0.0.0.0 --port=5000 --reload --debugger
-    # O si usas Gunicorn para producción:
-    # command: >
-    #   bash -c "flask db upgrade && gunicorn --bind 0.0.0.0:5000 run:app"
-
-# --- Servicio de phpMyAdmin ---
-  phpmyadmin: # Add this new service
-    image: phpmyadmin/phpmyadmin:latest # Use the official phpMyAdmin image
-    container_name: tickets_phpmyadmin # A memorable name for the phpMyAdmin container
-    restart: unless-stopped # Ensure it restarts automatically
-    ports:
-      - "8080:80" # Map container port 80 (phpMyAdmin) to host port 8080
-                 # You can change 8080 if it conflicts with another service on your machine.
-    environment:
-      PMA_HOST: tickets_mysql_db # phpMyAdmin will connect to the 'db' service (your MySQL container)
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # Reuses the root password from .env.docker
-    depends_on:
-      tickets_db:
-        condition: service_healthy # Ensures phpMyAdmin starts only when the database is healthy
+      - mongo
+    command: >
+      bash -c "flask init-db-data && flask run --host=0.0.0.0 --port=5000 --reload --debugger"
 
 # --- Definición de Volúmenes ---
-# Estos volúmenes son gestionados por Docker y persisten los datos.
 volumes:
-  mysql_data: # Volumen nombrado para los datos de MySQL
+  mongo_data:

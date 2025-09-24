@@ -22,17 +22,17 @@
             <h2>Ticket Asignado</h2>
         </div>
         <p>Estimado(a) {{ operator_name }},</p>
-        <p>Se le ha asignado el Ticket <strong>#{{ ticket.id }}</strong> para su gestión.</p>
+        <p>Se le ha asignado el Ticket <strong>#{{ ticket._id | string }}</strong> para su gestión.</p>
         
         <h3>Detalles del Ticket:</h3>
         <p><strong>Descripción:</strong> {{ ticket.description }}</p>
-        <p><strong>Categoría:</strong> {{ ticket.category_obj.name }}</p>
+        <p><strong>Categoría:</strong> {{ category_map[ticket.category_value] }}</p>
         {% if ticket.observation %}
         <p><strong>Observación:</strong> {{ ticket.observation }}</p>
         {% endif %}
 
         <p>Puede ver y empezar a trabajar en el ticket en el siguiente enlace:</p>
-        <p><a href="{{ url_for('operator_bp.operator_ticket_detail', ticket_id=ticket.id, _external=True) }}" class="button">Ver Ticket</a></p>
+        <p><a href="{{ url_for('operator_bp.operator_ticket_detail', ticket_id=ticket._id | string, _external=True) }}" class="button">Ver Ticket</a></p>
 
         <p>Saludos,</p>
         <p>El equipo de Soporte</p>

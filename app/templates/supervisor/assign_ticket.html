@@ -1,13 +1,13 @@
 {# templates/tickets/assign_ticket.html #}
 {% extends 'base.html' %}
 
-{% block title %}Asignar Ticket #{{ ticket.id }}{% endblock %}
+{% block title %}Asignar Ticket #{{ ticket._id }}{% endblock %}
 
 {% block content %}
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <h1>Asignar Ticket #{{ ticket.id }}</h1>
-            <p><strong>Estado Actual:</strong> {{ ticket.status_obj.name }}</p>
+            <h1>Asignar Ticket #{{ ticket._id }}</h1>
+            <p><strong>Estado Actual:</strong> {{ status_map[ticket.status_value] }}</p>
             <p><strong>Título:</strong> {{ ticket.title }}</p>
             <p><strong>Descripción:</strong> {{ ticket.description }}</p>
 

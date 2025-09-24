@@ -1,256 +1,148 @@
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app.operator import operator_bp
-from app import db
-from app.models import Ticket
+from app import mongo
 from app.supervisor.forms import TicketFilterForm
-from sqlalchemy.exc import SQLAlchemyError
 from app.operator.forms import OperatorTicketForm
-from app.models import Ticket, Status, TicketHistory
-from app.utils import log_ticket_change, get_ticket_attributes_for_history, send_notification_email
-from app.auth.models import Persona
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timezone
-from flask import request
 from app.auth.decorators import operador_required
 import logging
-from app.repositories import SQLTicketRepository, SQLStatusRepository, SQLTicketHistoryRepository
+from bson.objectid import ObjectId
+import pymongo
+from app.utils import log_ticket_history, send_notification_email
 
 logger = logging.getLogger(__name__)
 
-# Instantiate repositories
-ticket_repository = SQLTicketRepository()
-status_repository = SQLStatusRepository()
-ticket_history_repository = SQLTicketHistoryRepository()
-
-
-# ------------------------------------------------------------------------------
-#               FUNCIÓN: LISTADO DE TICKETS (OPERADOR)
-# ------------------------------------------------------------------------------
-@operator_bp.route('/operator_tickets', methods=['GET', 'POST']) # <--- Asegúrate de permitir POST también para el formulario
+@operator_bp.route('/operator_tickets', methods=['GET', 'POST'])
 @login_required
 @operador_required
 def operator_tickets():
-    # 1. Inicializa el formulario de filtro con los argumentos de la solicitud
     form = TicketFilterForm(request.args)
+    query = {"operator.user_id": ObjectId(current_user.id)}
 
-    # Si el botón de limpiar filtros fue presionado
-    if form.clear_filters.data:
-        return redirect(url_for('operator_bp.operator_tickets'))
+    # Aquí se añadiría la lógica de filtrado del formulario si es necesario
 
-    # 2. Usa la función de utilidad, pasándole la instancia del formulario
-    #    'filter_by_user_role=True' asegura que solo vea sus tickets.
-    tickets = ticket_repository.get_filtered_tickets(form=form, filter_by_user_role=True)
+    try:
+        tickets = list(mongo.db.tickets.find(query).sort("created_at", -1))
+        logger.info(f'Usuario {current_user.username} consultó sus tickets asignados. Se encontraron {len(tickets)} tickets.')
+    except pymongo.errors.PyMongoError as e:
+        logger.error(f"Error al buscar tickets para el operador {current_user.username}: {e}")
+        flash("Error al cargar los tickets asignados.", "danger")
+        tickets = []
 
-    logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó sus tickets. Se encontraron {len(tickets)} tickets.')
-    
-    # Prepara los argumentos para el URL de exportación, si lo usas.
-    export_url_args = request.args.copy()
+    # Poblar los formularios de filtro (solo categorías y estados)
+    try:
+        statuses = list(mongo.db.statuses.find().sort("name", 1))
+        form.status.choices = [('', 'Todos los Estados')] + [(s['value'], s['name']) for s in statuses]
+        categories = list(mongo.db.categories.find().sort("name", 1))
+        form.category.choices = [('', 'Todas las Categorías')] + [(c['value'], c['name']) for c in categories]
 
-    return render_template(
-        'operator/operator_tickets.html',
-        title='Mis Tickets Asignados',
-        tickets=tickets,
-        form=form,
-        export_url_args=export_url_args
-    )
+        # Crear status_map para la plantilla
+        status_map = {s['value']: s['name'] for s in statuses}
 
-# ------------------------------------------------------------------------------
-#               FUNCIÓN: EDICIÓN DE TICKETS (OPERADOR)
-# ------------------------------------------------------------------------------
+    except pymongo.errors.PyMongoError as e:
+        logger.error(f"Error al poblar los filtros: {e}")
+        flash("Error al cargar opciones de filtro.", "warning")
+        status_map = {}
 
-@operator_bp.route('/operator_ticket_detail/<int:ticket_id>', methods=['GET', 'POST'])
+    return render_template('operator/operator_tickets.html', title='Mis Tickets Asignados', tickets=tickets, form=form, status_map=status_map)
+
+@operator_bp.route('/operator_ticket_detail/<string:ticket_id>', methods=['GET', 'POST'])
 @login_required
 @operador_required
 def operator_ticket_detail(ticket_id):
-    ticket = ticket_repository.find_by_id(ticket_id)
+    try:
+        ticket = mongo.db.tickets.find_one({"_id": ObjectId(ticket_id), "operator.user_id": ObjectId(current_user.id)})
+    except Exception as e:
+        logger.error(f"Error al buscar ticket {ticket_id} para detalle: {e}")
+        flash("Error al cargar el ticket.", "danger")
+        return redirect(url_for('operator_bp.operator_tickets'))
 
-    if not ticket or ticket.asigned_operator_id != current_user.id:
+    if not ticket:
         flash('Ticket no encontrado o no asignado a ti.', 'danger')
         return redirect(url_for('operator_bp.operator_tickets'))
 
+    # Definir los estados en los que el ticket es editable para el operador
     editable_status_values = ['pending', 'rejected', 'in_progress']
-    is_ticket_editable_by_operator = (ticket.status_obj and ticket.status_obj.value in editable_status_values)
+    is_ticket_editable_by_operator = (ticket['status_value'] in editable_status_values)
 
-    old_values = get_ticket_attributes_for_history(ticket)
-    old_status = status_repository.find_by_id(old_values['status_id'])
-    old_status_value = old_status.value if old_status else None
+    # Definir los estados a los que el operador puede cambiar el ticket
+    assignable_status_values = ['completed', 'cancelled']
 
-    form = OperatorTicketForm(obj=ticket)
+    logger.debug(f"DEBUG: Ticket status_value: {ticket['status_value']}, is_ticket_editable_by_operator: {is_ticket_editable_by_operator}")
 
-    completed_status_obj = status_repository.find_by_value('completed')
-    cancelled_status_obj = status_repository.find_by_value('cancelled')
-    
-    allowed_status_choices_for_select = []
-    if completed_status_obj:
-        allowed_status_choices_for_select.append((completed_status_obj.id, completed_status_obj.name))
-    if cancelled_status_obj:
-        allowed_status_choices_for_select.append((cancelled_status_obj.id, cancelled_status_obj.name))
-    
-    form.status.choices = allowed_status_choices_for_select
-    form.status.choices.sort(key=lambda x: x[1])
+    form = OperatorTicketForm(data=ticket)
 
+    # Poblar SelectField de estados
+    try:
+        statuses = list(mongo.db.statuses.find().sort("name", 1))
+        # Filtrar estados permitidos para el operador
+        form.status.choices = [('', '--- Seleccione un Estado ---')] + [(s['value'], s['name']) for s in statuses if s['value'] in assignable_status_values]
+        status_map = {s['value']: s['name'] for s in statuses}
+    except pymongo.errors.PyMongoError as e:
+        logger.error(f"Error al poblar estados en operator_ticket_detail: {e}")
+        flash("Error al cargar opciones de estado.", "warning")
+        status_map = {}
+
+    # Si es GET, precargar los valores actuales del ticket en el formulario
     if request.method == 'GET':
-        # ¡IMPORTANTE! Si ya no quieres que el campo `observation` se muestre
-        # y edite directamente, no precargues `form.operator_notes.data`.
-        # Si `operator_notes` es para la *nueva* nota de historial, déjalo vacío en GET.
-        # form.operator_notes.data = ticket.observation # <-- Considera eliminar o ajustar esto
+        form.status.data = ticket.get('status_value')
+        form.operator_notes.data = ticket.get('observation', '') # Si hay un campo de observación
 
-        # Si el operador debe ver la "última observación" del historial,
-        # deberías cargarla desde el registro de TicketHistory más reciente, no de `ticket.observation`.
-        # Pero si el campo `operator_notes` es solo para AÑADIR una nueva nota, déjalo así.
-        pass # No hacemos nada aquí, el campo de notas queda vacío para una nueva entrada.
-
-
-    if form.validate_on_submit() and is_ticket_editable_by_operator:
+    if form.validate_on_submit():
         try:
-            new_status_id = form.status.data
-            new_status_obj = status_repository.find_by_id(new_status_id)
-
-            flash_status_msg = ''
-            should_send_client_email = False 
+            new_status_value = form.status.data
+            update_data = {
+                "status_value": new_status_value,
+                "updated_at": datetime.now(timezone.utc)
+            }
+            if form.operator_notes.data:
+                update_data['observation'] = form.operator_notes.data
             
-            email_trigger_status_values = ['completed', 'cancelled']
+            # Lógica para completed_at
+            if new_status_value in ['completed', 'cancelled'] and not ticket.get('completed_at'):
+                update_data['completed_at'] = datetime.now(timezone.utc)
+            elif new_status_value not in ['completed', 'cancelled'] and ticket.get('completed_at'):
+                update_data['completed_at'] = None
 
-            if new_status_obj:
-                if ticket.status_id != new_status_obj.id:
-                    ticket.status_id = new_status_obj.id
-                    flash_status_msg = f'Estado cambiado a "{new_status_obj.name}".'
-                    
-                    if new_status_obj.value in email_trigger_status_values:
-                        if old_status_value not in email_trigger_status_values:
-                            should_send_client_email = True
-                            flash_status_msg += ' Se enviará notificación al cliente.'
-                else:
-                    flash_status_msg = 'El estado no fue modificado.'
-            else:
-                flash_status_msg = 'Advertencia: Estado seleccionado no válido.'
-            
-            # Lógica para manejar completed_timestamp
-            if new_status_obj and new_status_obj.value in ['completed', 'cancelled'] and old_status_value not in ['completed', 'cancelled', 'closed']:
-                ticket.completed_timestamp = datetime.now(timezone.utc)
-            elif ticket.completed_timestamp and new_status_obj and new_status_obj.value in editable_status_values:
-                ticket.completed_timestamp = None
-                flash_status_msg += ' Fecha de finalización eliminada (ticket reabierto).'
+            mongo.db.tickets.update_one({"_id": ObjectId(ticket_id)}, {"$set": update_data})
 
-            ticket.modified_timestamp = datetime.now(timezone.utc)
+            log_ticket_history(ticket_id, "Actualización de Ticket por Operador", current_user, f"Estado cambiado a {new_status_value}")
 
-            new_values = get_ticket_attributes_for_history(ticket)
+            # Lógica de envío de correos (simplificada, a refactorizar)
+            # send_notification_email(...)
 
-            operator_note = form.operator_notes.data
-            change_details_msg = f'Notas del operador: {operator_note}' if operator_note else None
-            if flash_status_msg:
-                change_details_msg = f'{flash_status_msg}. {change_details_msg}' if change_details_msg else flash_status_msg
-
-            log_ticket_change(
-                ticket=ticket,
-                changed_by_persona=current_user,
-                change_type='Actualización de Ticket por Operador', # Puedes hacer esto más específico si solo hubo cambio de estado/nota
-                old_values=old_values,
-                new_values=new_values,
-                change_details=change_details_msg 
-            )
-
-            ticket_repository.save(ticket)
-            db.session.commit()
-        
-            flash(f'Ticket {ticket.id} actualizado exitosamente. {flash_status_msg}', 'success')
-            
-            # --- LÓGICA DE ENVÍO DE CORREO AL CLIENTE ---
-            if should_send_client_email and ticket.creator_obj and ticket.creator_obj.email: 
-                # Variables para la plantilla del cliente
-                new_status_display_name = new_status_obj.name.capitalize() if new_status_obj else "Desconocido" # Usa .name para el nombre legible
-                acting_operator_name = current_user.username if current_user and current_user.username else "Operador Desconocido"
-                
-                subject = f"Actualización de su Ticket #{ticket.id} - {new_status_display_name}"
-                
-                # Generar URL del ticket para el cliente
-                # Asegúrate de que 'client_bp' y 'view_ticket_detail' existan en tus rutas de cliente
-                ticket_url_for_client = url_for('client_bp.client_tickets', ticket_id=ticket.id, _external=True) 
-
-                send_notification_email(
-                    subject=subject,
-                    recipients=[ticket.creator_obj.email],
-                    template='emails/ticket_updated.html', # La plantilla del cliente
-                    ticket_id=ticket.id, 
-                    ticket_title=ticket.description, # Asumo que description es el "título"
-                    client_name=ticket.creator_obj.username, 
-                    new_status_name=new_status_display_name, 
-                    operator_name=acting_operator_name,      
-                    ticket_url=ticket_url_for_client 
-                )
-                logger.info(f"Correo enviado al cliente ({ticket.creator_obj.email}) por actualización de ticket #{ticket.id}.")
-            elif should_send_client_email and (not ticket.creator_obj or not ticket.creator_obj.email):
-                logger.warning(f"No se pudo enviar correo al cliente para ticket #{ticket.id}: Email del creador no disponible o objeto creador nulo.")
-
+            flash(f'Ticket {ticket_id} actualizado exitosamente.', 'success')
             return redirect(url_for('operator_bp.operator_tickets'))
 
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            # --- Logger: ERROR - Intento de modificación de ticket fallido ---
-            logger.error(f'Intento de modificación de ticket fallido: Ticket ID: {ticket_id} no pudo editarse por el usuario {current_user.username} (ID: {current_user.id})',exc_info=True)
-            flash(f'Ocurrió un error al editar el ticket: {e}', 'error')
         except Exception as e:
-            # --- Logger: ERROR - Error inesperado ---
-            db.session.rollback()
-            message=f"Ocurrió un error inesperado. Por favor, contacte a soporte. Detalles: '{e}'", 'error'
-            logger.error(f'Al intentar modificar el ticket: {message}',exc_info=True)
-            flash(message, 'error')
-    
-    elif not is_ticket_editable_by_operator and request.method == 'POST':
-        flash('Este ticket no puede ser modificado por el operador en su estado actual.', 'warning')
+            logger.error(f"Error al actualizar ticket {ticket_id}: {e}", exc_info=True)
+            flash('Ocurrió un error al actualizar el ticket.', 'danger')
 
-    return render_template('operator/operator_ticket_detail.html',
-                           title=f'Detalle Ticket #{ticket.id}',
-                           form=form,
-                           ticket=ticket,
-                           is_ticket_editable_by_operator=is_ticket_editable_by_operator)   
+    return render_template('operator/operator_ticket_detail.html', title=f'Detalle Ticket #{ticket_id}', form=form, ticket=ticket, status_map=status_map, is_ticket_editable_by_operator=is_ticket_editable_by_operator)
 
-
-# ------------------------------------------------------------------------------
-#               FUNCIÓN: HISTORICO DE TICKETS (ACCESIBLE A TODOS LOS PERFIELS)
-# ------------------------------------------------------------------------------
-@operator_bp.route('/ticket/<int:ticket_id>/history', methods=['GET'])
-@login_required # Sigue siendo necesario para asegurar que solo usuarios autenticados accedan
+@operator_bp.route('/ticket/<string:ticket_id>/history', methods=['GET'])
+@login_required
 def ticket_history(ticket_id):
-    """
-    Muestra el historial de cambios para un ticket específico.
-    Si el usuario puede acceder a esta ruta, se asume que tiene permisos para ver el ticket.
-    """
-    ticket = ticket_repository.find_by_id(ticket_id)
+    try:
+        ticket = mongo.db.tickets.find_one({"_id": ObjectId(ticket_id)})
+        if not ticket:
+            flash('Ticket no encontrado.', 'danger')
+            return redirect(url_for('main.home'))
+        
+        # La lógica de permisos debería estar aquí. 
+        # Por ahora, se asume que si el usuario llega aquí, tiene permiso.
 
-    if not ticket:
-        flash('Ticket no encontrado.', 'danger')
-        # Redirige a una página segura si el ticket no existe
-        # Considera una página de error o la página principal de un usuario
-        return redirect(url_for('main_bp.index')) # O a 'client_bp.my_tickets' si es un cliente, etc.
+        # El historial está incrustado en el propio ticket
+        history_records = ticket.get('history', [])
+        
+        logger.info(f'Usuario {current_user.username} consultó el historial del ticket {ticket_id}.')
 
-    # ** Lógica de permisos removida aquí **
-    # La presunción es que si el usuario logró acceder a la URL para ver el historial de `ticket_id`,
-    # ya ha pasado por una verificación de permisos en la página de detalle del ticket.
-    # Si esa verificación falló, nunca habrían llegado a esta URL.
+        referrer_url = request.referrer or url_for('main.home')
 
-    history_records = ticket_history_repository.find_by_ticket_id(ticket_id)
+        return render_template('ticket_history.html', ticket=ticket, history_records=history_records, referrer_url=referrer_url)
 
-    # --- Logger: INFO - Consulta de histórico por parte del usuario ---
-    logger.info(f'Usuario {current_user.username} (ID: {current_user.id}) consultó el registro histórico del ticket {ticket.id}.')
-
-    # Este diccionario `changed_by_users` sigue siendo útil si no confías totalmente
-    # en las relaciones de SQLAlchemy para cargar los usernames directamente,
-    # o si quieres mapearlos a IDs por eficiencia.
-    # No obstante, si `record.changed_by.username` funciona, puedes simplificar la plantilla.
-    changed_by_users = {record.changed_by.id: record.changed_by.username for record in history_records if record.changed_by}
-
-    # Captura la URL de referencia (la página anterior)
-    # Si no hay referrer (ej. si se accedió directamente a la URL), puedes proporcionar una URL por defecto
-    referrer_url = request.referrer if request.referrer else url_for('main_bp.index')
-
-
-    return render_template(
-        'ticket_history.html',
-        ticket=ticket,
-        history_records=history_records,
-        changed_by_users=changed_by_users, # Pasar esto por seguridad o consistencia
-        referrer_url=referrer_url
-    )
+    except Exception as e:
+        logger.error(f"Error al cargar el historial del ticket {ticket_id}: {e}", exc_info=True)
+        flash("Error al cargar el historial del ticket.", "danger")
+        return redirect(url_for('main.home'))

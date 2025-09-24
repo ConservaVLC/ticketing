@@ -19,22 +19,22 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>Ticket #{{ ticket.id }} {{ new_status_name }}</h2>
+            <h2>Ticket #{{ ticket._id | string }} {{ new_status_name }}</h2>
         </div>
         <p>Estimado(a) usuario(a) ({{ recipient_name }}),</p>
-        <p>Le informamos que el Ticket <strong>#{{ ticket.id }}</strong> ha cambiado su estado a <strong>{{ new_status_name }}</strong> por el operador <strong>{{ operator_name }}</strong>.</p>
+        <p>Le informamos que el Ticket <strong>#{{ ticket._id | string }}</strong> ha cambiado su estado a <strong>{{ new_status_name }}</strong> por el operador <strong>{{ operator_name }}</strong>.</p>
         
         <h3>Detalles del Ticket:</h3>
         <p><strong>Descripción:</strong> {{ ticket.description }}</p>
-        <p><strong>Categoría:</strong> {{ ticket.category_obj.name }}</p>
+        <p><strong>Categoría:</strong> {{ category_map[ticket.category_value] }}</p>
         <p><strong>Estado final:</strong> {{ new_status_name }}</p>
         {% if ticket.observation %}
         <p><strong>Última observación:</strong> {{ ticket.observation }}</p>
         {% endif %}
-        <p><strong>Hora de finalización:</strong> {{ ticket.completed_timestamp.strftime('%d/%m/%Y %H:%M:%S') if ticket.completed_timestamp else 'N/A' }}</p>
+        <p><strong>Hora de finalización:</strong> {{ ticket.completed_at.strftime('%d/%m/%Y %H:%M:%S') if ticket.completed_at else 'N/A' }}</p>
 
         <p>Puede ver los detalles completos del ticket en el siguiente enlace:</p>
-        <p><a href="{{ url_for('operator_bp.operator_ticket_detail', ticket_id=ticket.id, _external=True) }}" class="button">Ver Ticket</a></p>
+        <p><a href="{{ url_for('operator_bp.operator_ticket_detail', ticket_id=ticket._id | string, _external=True) }}" class="button">Ver Ticket</a></p>
 
         <p>Saludos,</p>
         <p>El equipo de Soporte</p>

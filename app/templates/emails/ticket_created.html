@@ -24,16 +24,16 @@
         <p>Estimado(a) {{ supervisor_name }},</p>
         <p>El cliente <strong>{{ client_name  }}</strong> ha creado un nuevo ticket que ha sido asignado a su supervisión.</p>
         
-        <h3>Detalles del Ticket #{{ ticket.id }}:</h3>
+        <h3>Detalles del Ticket #{{ ticket._id | string }}:</h3>
         <p><strong>Descripción:</strong> {{ ticket.description }}</p>
-        <p><strong>Categoría:</strong> {{ ticket.category_obj.name }}</p>
-        <p><strong>Estado:</strong> {{ ticket.status_obj.name }}</p>
+        <p><strong>Categoría:</strong> {{ category_map[ticket.category_value] }}</p>
+        <p><strong>Estado:</strong> {{ status_map[ticket.status_value] }}</p>
         {% if ticket.observation %}
         <p><strong>Observación inicial:</strong> {{ ticket.observation }}</p>
         {% endif %}
 
         <p>Puede ver y gestionar el ticket en el siguiente enlace:</p>
-        <p><a href="{{ url_for('supervisor_bp.edit_ticket', ticket_id=ticket.id, _external=True) }}" class="button">Ver Ticket</a></p>
+        <p><a href="{{ url_for('supervisor_bp.edit_ticket', ticket_id=ticket._id | string, _external=True) }}" class="button">Ver Ticket</a></p>
 
         <p>Saludos,</p>
         <p>El equipo de Soporte</p>

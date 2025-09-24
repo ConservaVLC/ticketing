@@ -1,7 +1,7 @@
 {# app/templates/ticket_history.html #}
 {% extends "base.html" %}
 
-{% block title %}Historial del Ticket #{{ ticket.id }}{% endblock %}
+{% block title %}Historial del Ticket #{{ ticket._id }}{% endblock %}
 
 {% block head %}
     {{ super() }}
@@ -50,7 +50,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Historial del Ticket #<span class="text-primary">{{ ticket.id }}</span></h2>
+        <h2>Historial del Ticket #<span class="text-primary">{{ ticket._id | string }}</span></h2>
         <a href="{{ referrer_url }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver a la Página Anterior
         </a>
@@ -78,7 +78,7 @@
                         {% endif %}
                     </h5>
                     <small class="text-muted">
-                        <i class="fas fa-clock"></i> {{ record.change_timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+                        <i class="fas fa-clock"></i> {{ record.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
                     </small>
                 </div>
                 <small class="text-muted mb-2 d-block">
@@ -86,115 +86,31 @@
                     {% if record.changed_by %}
                         <strong>{{ record.changed_by.username }}</strong>
                     {% else %}
-                        Usuario Desconocido (ID: {{ record.changed_by_id }})
+                        Usuario Desconocido
                     {% endif %}
                 </small>
 
                 {# Muestra la nota si existe, de forma destacada para el rechazo #}
-                {% if record.change_details %}
+                {% if record.details %}
                     <div class="change-details">
                         <p class="mb-1">
                             {% if record.change_type == 'Rechazo de Resolución' %}
                                 <small class="text-danger">Motivo del rechazo: <br>
-                                    <span class="pre-wrap-text">{{ record.change_details | default('') | safe }}</span>
+                                    <span class="pre-wrap-text">{{ record.details | default('') | safe }}</span>
                                 </small>
                             {% else %}
                                 <small class="text-muted">Notas de la acción: <br>
-                                    <span class="pre-wrap-text">{{ record.change_details | default('') | safe }}</span>
+                                    <span class="pre-wrap-text">{{ record.details | default('') | safe }}</span>
                                 </small>
                             {% endif %}
                         </p>
                     </div>
                 {% endif %}
 
-                <div class="mt-3">
-                    {# Evita mostrar el cambio de 'None' a un valor #}
-                    {% if record.previous_status_id and record.previous_status_id != record.new_status_id %}
-                        <span class="badge bg-info me-2">
-                            Estado:
-                            <i class="fas fa-circle-notch"></i> {{ record.prev_status.name if record.prev_status else 'N/A' }}
-                            <i class="fas fa-arrow-right"></i>
-                            <i class="fas fa-check-circle"></i> {{ record.new_status.name if record.new_status else 'N/A' }}
-                        </span>
-                    {% endif %}
-                    
-                    {% if record.previous_category_id and record.previous_category_id != record.new_category_id %}
-                        <span class="badge bg-info me-2">
-                            Categoría:
-                            <i class="fas fa-tag"></i> {{ record.prev_category.name if record.prev_category else 'N/A' }}
-                            <i class="fas fa-arrow-right"></i>
-                            <i class="fas fa-tags"></i> {{ record.new_category.name if record.new_category else 'N/A' }}
-                        </span>
-                    {% endif %}
-                    
-                    {% if record.previous_operator_id and record.previous_operator_id != record.new_operator_id %}
-                        <span class="badge bg-primary me-2">
-                            Operador:
-                            <i class="fas fa-user-tie"></i> {{ record.prev_operator.username if record.prev_operator else 'N/A' }}
-                            <i class="fas fa-arrow-right"></i>
-                            <i class="fas fa-user-tie"></i> {{ record.new_operator.username if record.new_operator else 'N/A' }}
-                        </span>
-                    {% endif %}
+                {# Los cambios de valores antiguos/nuevos no se están registrando en el nuevo log_ticket_history #}
+                {# Si se desea mostrar, la función log_ticket_history debería guardar old_values y new_values #}
+                {# y esta sección de la plantilla debería adaptarse para leerlos. #}
 
-                    {% if record.previous_supervisor_id and record.previous_supervisor_id != record.new_supervisor_id %}
-                        <span class="badge bg-primary me-2">
-                            Supervisor:
-                            <i class="fas fa-user-shield"></i> {{ record.prev_supervisor.username if record.prev_supervisor else 'N/A' }}
-                            <i class="fas fa-arrow-right"></i>
-                            <i class="fas fa-user-shield"></i> {{ record.new_supervisor.username if record.new_supervisor else 'N/A' }}
-                        </span>
-                    {% endif %}
-
-                    {# Mostrar cambios en la descripción, omitiendo la inicial si es de 'None' #}
-                    {% if record.previous_description and record.previous_description != record.new_description %}
-                        <p class="mt-2 mb-1 text-muted">
-                            <i class="fas fa-file-alt"></i> Descripción (anterior): <br>
-                            <small><span class="pre-wrap-text">{{ record.previous_description | default('') | safe }}</span></small>
-                        </p>
-                        <p class="text-muted">
-                            <i class="fas fa-file-alt"></i> Descripción (nueva): <br>
-                            <small><span class="pre-wrap-text">{{ record.new_description | default('') | safe }}</span></small>
-                        </p>
-                    {% endif %}
-
-                    {# Mostrar cambios en la observación, omitiendo la inicial si es de 'None' #}
-                    {% if record.previous_observation != record.new_observation %}
-                        <p class="mt-2 mb-1 text-muted">
-                            <i class="fas fa-comment-dots"></i> Observación (anterior): <br>
-                            <small><span class="pre-wrap-text">{{ record.previous_observation | default('') | safe }}</span></small>
-                        </p>
-                        <p class="text-muted">
-                            <i class="fas fa-comment-dots"></i> Observación (nueva): <br>
-                            <small><span class="pre-wrap-text">{{ record.new_observation | default('') | safe }}</span></small>
-                        </p>
-                    {% endif %}
-                    
-                    {# Muestra los valores iniciales del ticket si este es el registro de creación #}
-                    {% if loop.last %}
-                        <hr class="my-3">
-                        <p class="mb-1 text-success">
-                            <i class="fas fa-plus-circle"></i> **Ticket Creado**
-                        </p>
-                        <p class="mb-1 text-muted">
-                            <i class="fas fa-circle-notch"></i> Estado: <span class="badge bg-success">{{ record.new_status.name }}</span>
-                        </p>
-                        <p class="mb-1 text-muted">
-                            <i class="fas fa-tags"></i> Categoría: <span class="badge bg-info">{{ record.new_category.name }}</span>
-                        </p>
-                        {% if record.new_description %}
-                            <p class="mb-1 text-muted">
-                                <i class="fas fa-file-alt"></i> Descripción: <br>
-                                <small><span class="pre-wrap-text">{{ record.new_description | safe }}</span></small>
-                            </p>
-                        {% endif %}
-                        {% if record.new_observation %}
-                            <p class="mb-1 text-muted">
-                                <i class="fas fa-comment-dots"></i> Observación: <br>
-                                <small><span class="pre-wrap-text">{{ record.new_observation | safe }}</span></small>
-                            </p>
-                        {% endif %}
-                    {% endif %}
-                </div>
             </div>
             {% endfor %}
         </div>

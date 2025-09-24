@@ -8,7 +8,7 @@
         <form method="POST">
             {{ form.csrf_token }}
 
-            {# Campo de Categoría (desplegable) #}
+            {# Campo de Categoría (des desplegable) #}
             <div class="form-group mb-3"> {# Usamos mb-3 para Bootstrap 5, o form-group para Bootstrap 4 #}
                 {{ form.category.label(class="form-label") }} {# O form-control-label para Bootstrap 4 #}
                 {{ form.category(class_="form-select") }} {# Clase para desplegables en Bootstrap 5 #}                             

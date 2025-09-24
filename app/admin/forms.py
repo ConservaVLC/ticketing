@@ -1,27 +1,24 @@
 from flask_wtf import FlaskForm
 from wtforms import SubmitField, StringField
 from wtforms.validators import DataRequired, Length, ValidationError
-from app import db 
-from ..models import Category
-from app.repositories import SQLCategoryRepository
+from app import mongo # Importamos mongo
+from slugify import slugify
 
-# FORMULARIO VACÍO PARA TRATAMIENTO DE 'CSRF'
 class EmptyForm(FlaskForm):
     submit = SubmitField('Submit')
 
-# FORUMLARIO PARA EDICIÓN DE CATEGORÍAS
 class CategoryForm(FlaskForm):
     name = StringField('Nombre de la categoría', validators=[DataRequired(), Length(min=2, max=30, message='La categoría debe tener entre 2 y 30 caracteres')])
     submit = SubmitField('Guardar Categoría', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
-    # Para la validación de unicidad en la edición
-    def __init__(self, original_name=None, *args, **kwargs):
+    def __init__(self, original_value=None, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
-        self.original_name = original_name
+        self.original_value = original_value
 
     def validate_name(self, name):
-        if name.data != self.original_name: # Solo validar si el nombre ha cambiado
-            category_repository = SQLCategoryRepository()
-            category = category_repository.find_by_name(name.data)
+        # La validación de unicidad se hará sobre el 'value' generado
+        generated_value = slugify(name.data)
+        if generated_value != self.original_value:
+            category = mongo.db.categories.find_one({"value": generated_value})
             if category:
-                raise ValidationError('Esta categoría ya existe')
+                raise ValidationError('Ya existe una categoría que genera el mismo valor interno. Por favor, elige un nombre ligeramente diferente.')

@@ -24,8 +24,8 @@ def role_required(roles):
                 allowed_roles = roles
                 
             # Verifica si el rol del usuario está en la lista de roles permitidos
-            if current_user.role_obj.value not in allowed_roles:
-                flash(f'No tienes permiso para acceder a esta página. Tu rol es "{current_user.role_id}".', 'danger')
+            if current_user.role not in allowed_roles:
+                flash(f'No tienes permiso para acceder a esta página. Tu rol es "{current_user.role}".', 'danger')
                 abort(403) # HTTP 403 Forbidden
             return f(*args, **kwargs)
         return decorated_function

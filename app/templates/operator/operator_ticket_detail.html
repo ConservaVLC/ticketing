@@ -2,11 +2,11 @@
 
 {% extends "base.html" %} 
 
-{% block title %}Editar ticket{% endblock %}
+{% block title %}Detalle Ticket #{{ ticket._id }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">Detalle Ticket #{{ ticket.id }} - {{ ticket.title }}</h2>
+    <h2 class="mb-4">Detalle Ticket #{{ ticket._id }} - {{ ticket.title }}</h2>
 
     {# Mensajes Flash #}
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -23,34 +23,33 @@
             Información del Ticket
         </div>
         <div class="card-body">
-            {# AHORA MOSTRAMOS EL ESTADO ACTUAL DE FORMA SEPARADA Y CLARA #}
             <p><strong>Estado Actual:</strong> 
                 <span class="badge 
-                    {% if ticket.status_obj.value == 'pending' %}bg-secondary
-                    {% elif ticket.status_obj.value == 'in_progress' %}bg-info
-                    {% elif ticket.status_obj.value == 'completed' %}bg-success
-                    {% elif ticket.status_obj.value == 'cancelled' %}bg-danger
-                    {% elif ticket.status_obj.value == 'closed' %}bg-dark
-                    {% elif ticket.status_obj.value == 'rejected' %}bg-warning
+                    {% if ticket.status_value == 'pending' %}bg-secondary
+                    {% elif ticket.status_value == 'in_progress' %}bg-info
+                    {% elif ticket.status_value == 'completed' %}bg-success
+                    {% elif ticket.status_value == 'cancelled' %}bg-danger
+                    {% elif ticket.status_value == 'closed' %}bg-dark
+                    {% elif ticket.status_value == 'rejected' %}bg-warning
                     {% else %}bg-light text-dark
                     {% endif %}">
-                    {{ ticket.status_obj.name if ticket.status_obj else 'N/A' }}
+                    {{ status_map[ticket.status_value] }}
                 </span>
             </p>
-            <p><strong>Prioridad:</strong> {{ ticket.priority_obj.name if ticket.priority_obj else 'N/A' }}</p>
-            <p><strong>Categoría:</strong> {{ ticket.category_obj.name if ticket.category_obj else 'N/A' }}</p>
-            <p><strong>Creado por:</strong> {{ ticket.creator_obj.name }} el {{ ticket.created_timestamp.strftime('%d/%m/%Y %H:%M') if ticket.created_timestamp else 'N/A' }}</p>
-            <p><strong>Asignado a:</strong> {{ ticket.asigned_operator_obj.username if ticket.asigned_operator_obj else 'N/A' }}</p>
-            <p><strong>Supervisor Asignado:</strong> {{ ticket.asignated_supervisor_obj.username if ticket.asignated_supervisor_obj else 'N/A' }}</p>
-            {% if ticket.completed_timestamp %}
-            <p><strong>Completado/Cancelado el:</strong> {{ ticket.completed_timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+            <p><strong>Prioridad:</strong> {{ ticket.priority_value | replace('_', ' ') | title if ticket.priority_value else 'N/A' }}</p>
+            <p><strong>Categoría:</strong> {{ ticket.category_value | replace('-', ' ') | title if ticket.category_value else 'N/A' }}</p>
+            <p><strong>Creado por:</strong> {{ ticket.creator.username if ticket.creator else 'N/A' }} el {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') if ticket.created_at else 'N/A' }}</p>
+            <p><strong>Asignado a:</strong> {{ ticket.operator.username if ticket.operator else 'N/A' }}</p>
+            <p><strong>Supervisor Asignado:</strong> {{ ticket.supervisor.username if ticket.supervisor else 'N/A' }}</p>
+            {% if ticket.completed_at %}
+            <p><strong>Completado/Cancelado el:</strong> {{ ticket.completed_at.strftime('%d/%m/%Y %H:%M') }}</p>
             {% endif %}
-            <p><strong>Última Modificación:</strong> {{ ticket.modified_timestamp.strftime('%d/%m/%Y %H:%M') if ticket.modified_timestamp else 'N/A' }}</p>
+            <p><strong>Última Modificación:</strong> {{ ticket.updated_at.strftime('%d/%m/%Y %H:%M') if ticket.updated_at else 'N/A' }}</p>
             <hr>
             <p><strong>Descripción:</strong></p>
             <div class="alert alert-light border">{{ ticket.description | safe }}</div>
             <div class="d-flex justify-content-center">
-                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket.id) }}" class="btn btn-outline-secondary col-md-10 align-items-center">
+                <a href="{{ url_for('operator_bp.ticket_history', ticket_id=ticket._id | string) }}" class="btn btn-outline-secondary col-md-10 align-items-center">
                         <i class="fas fa-history"></i> Ver Historial
                 </a>
             </div>
@@ -84,7 +83,7 @@
         {% if is_ticket_editable_by_operator %}
             {{ form.submit() }}
         {% else %}
-            <p class="alert alert-info">Este ticket está en un estado final ({{ ticket.status_obj.name if ticket.status_obj else 'N/A' }}) y no puede ser modificado por el operador.</p>
+            <p class="alert alert-info">Este ticket está en un estado final ({{ status_map[ticket.status_value] }}) y no puede ser modificado por el operador.</p>
         {% endif %}
 
         <a href="{{ url_for('operator_bp.operator_tickets') }}" class="btn btn-secondary ms-2">Volver a la lista</a>

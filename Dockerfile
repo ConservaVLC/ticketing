@@ -38,4 +38,4 @@ ENV PYTHONUNBUFFERED=1
 # Comando de inicio para Gunicorn.
 # Este comando ejecuta las migraciones de la base de datos (flask db upgrade)
 # y luego inicia el servidor Gunicorn en un solo comando.
-CMD ["/bin/bash", "-c", "until flask db upgrade; do echo 'Waiting for database...'; sleep 5; done && flask init-db-data && gunicorn --workers=3 --threads=2 --bind 0.0.0.0:${PORT} run:app"]
+CMD ["/bin/bash", "-c", "flask init-db-data && gunicorn --workers=3 --threads=2 --bind 0.0.0.0:${PORT} run:app"]

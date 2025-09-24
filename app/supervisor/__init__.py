@@ -5,4 +5,3 @@ supervisor_bp = Blueprint(
     template_folder='app/templates/supervisor',
     static_folder='static'
 )
-from . import routes

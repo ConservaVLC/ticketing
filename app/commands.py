@@ -4,8 +4,6 @@ from flask.cli import with_appcontext
 from app import mongo
 from app.auth.models import Persona
 import click
-import secrets
-import string
 import pymongo
 
 @click.command("init-db-data")

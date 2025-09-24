@@ -32,7 +32,7 @@ def init_app_extensions(app):
     if not mongo_uri:
         raise RuntimeError("FATAL: La variable de entorno MONGO_URI no está configurada.")
 
-    app.logger.info(f"Intentando conectar a MongoDB...")
+    app.logger.info("Intentando conectar a MongoDB...")
 
     try:
         mongo.init_app(app)

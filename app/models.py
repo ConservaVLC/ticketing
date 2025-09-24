@@ -51,7 +51,6 @@
 # Los datos se manejan como diccionarios (documentos de MongoDB).
 # Estas clases son solo para mantener una estructura conceptual clara si se desea.
 
-from datetime import datetime, timezone
 
 class Category:
     """Representación conceptual de una Categoría."""

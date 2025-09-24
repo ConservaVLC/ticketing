@@ -5,4 +5,3 @@ client_bp = Blueprint(
     template_folder='app/templates/client',
     static_folder='static'
 )
-from . import routes

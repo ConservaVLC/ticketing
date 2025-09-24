@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, current_app
+from flask import render_template, redirect, url_for, flash, request
 from app.auth import auth_bp
 from app.auth.forms import (
     RegistrationForm, LoginForm, ResetPasswordForm, RequestResetPasswordForm, 

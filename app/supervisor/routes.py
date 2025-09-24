@@ -10,8 +10,7 @@ import pymongo
 import logging
 from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-from app.utils import log_ticket_history, send_notification_email
+from app.utils import log_ticket_history
 
 logger = logging.getLogger(__name__)
 

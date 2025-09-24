@@ -9,7 +9,7 @@ from app.auth.decorators import operador_required
 import logging
 from bson.objectid import ObjectId
 import pymongo
-from app.utils import log_ticket_history, send_notification_email
+from app.utils import log_ticket_history
 
 logger = logging.getLogger(__name__)
 

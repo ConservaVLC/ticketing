@@ -9,7 +9,9 @@ import os
 # from dotenv import load_dotenv
 # load_dotenv()
 
-app = create_app()
+# Lee la configuración del entorno o usa 'development' por defecto
+config_name = os.environ.get('FLASK_CONFIG', 'development')
+app = create_app(config_name)
 
 # ----------------------------------------------------------------
 

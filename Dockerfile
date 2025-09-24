@@ -33,6 +33,7 @@ EXPOSE 5000
 # FLASK_APP es la única variable esencial aquí.
 # Las credenciales de la BBDD se pasarán a través de la consola de Cloud Run.
 ENV FLASK_APP=app
+ENV FLASK_CONFIG=production
 ENV PYTHONUNBUFFERED=1
 
 # Comando de inicio para Gunicorn.

@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, url_for, request, current_app
+from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app.client import client_bp
 from app import mongo
@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from app.auth.decorators import client_required
 import logging
 from bson.objectid import ObjectId
+from bson.errors import InvalidId
 import pymongo
 from app.utils import log_ticket_history, send_notification_email # Importar funciones centralizadas
 
@@ -131,7 +132,7 @@ def client_tickets():
         if form.ticket_id.data:
             try:
                 query["_id"] = ObjectId(form.ticket_id.data)
-            except:
+            except InvalidId:
                 flash("ID de Ticket inválido.", "warning")
         if form.search_title.data:
             query["title"] = {"$regex": form.search_title.data, "$options": "i"}

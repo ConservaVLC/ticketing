@@ -1,69 +1,85 @@
-name: CI/CD Pipeline
+name: Deploy MongoDB App to Cloud Run
 
 on:
   push:
     branches:
       - main
+      - dev # New branch for development/development
+  workflow_dispatch: {} # Allows manual triggering from GitHub UI
 
 env:
-  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }} # OBTENER DE GCP
-  GCP_REGION: "us-central1" # OBTENER DE GCP
-  CLOUD_RUN_SERVICE_NAME: "ticketing-app" # CAMBIAR
-  ARTIFACT_REGISTRY_REPO: "ticketing-run-repo" # CAMBIAR
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: "us-central1" # Cambia a tu regiÃ³n preferida
+  CLOUD_RUN_SERVICE_NAME: "ticketing-app" # NEW service name for MongoDB app
+  ARTIFACT_REGISTRY_REPO: "ticketing-run-repo" # Can reuse the same Artifact Registry repo
 
 jobs:
-  build-and-test:
+  deploy:
+    name: Deploy to Cloud Run
     runs-on: ubuntu-latest
-
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # Or your preferred Python version
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-    # - name: Run tests
-    #   run: |
-    #     pytest
+      - name: Run tests
+        run: pytest
+        env:
+          TEST_MONGO_URI: mongodb://localhost:27017/registro_horas_test
 
-  # deploy:
-  #   name: Deploy to Cloud Run
-  #   needs: build-and-test
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+      # --- End of Python setup and test steps ---
 
-  #     - name: Authenticate to Google Cloud
-  #       uses: google-github-actions/auth@v2
-  #       with:
-  #         credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-  #     - name: Set up Cloud SDK
-  #       uses: google-github-actions/setup-gcloud@v2
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-  #     - name: Configure Docker
-  #       run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
-  #     - name: Build and push Docker image
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: .
-  #         push: true
-  #         tags: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.CLOUD_RUN_SERVICE_NAME }}:${{ github.sha }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.CLOUD_RUN_SERVICE_NAME }}:${{ github.sha }}
+          no-cache: true # Deshabilita la cachÃ© para asegurar una construcciÃ³n limpia
 
-  #     - name: Deploy to Cloud Run
-  #       uses: google-github-actions/deploy-cloudrun@v2
-  #       with:
-  #         service: ${{ env.CLOUD_RUN_SERVICE_NAME }}
-  #         region: ${{ env.GCP_REGION }}
-  #         image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.CLOUD_RUN_SERVICE_NAME }}:${{ github.sha }}
-  #         platform: "managed"
-  #         allow-unauthenticated: true # Cambiar a false si requieres autenticación
+      - name: Run Ruff Linter
+        run: python -m ruff check . --ignore E402
+
+      - name: Deploy to Cloud Run with VPC Connector
+        env:
+          # Define VPC_CONNECTOR_PATH here where env.GCP_REGION is available
+          VPC_CONNECTOR_PATH_VAR: projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ env.GCP_REGION }}/connectors/mongo-cloud-run-connector
+          # Application Environment Variables
+          APP_MONGO_URI: ${{ secrets.MONGO_URI }}
+          APP_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          APP_GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+          APP_IS_LOCAL_ENV: False
+          APP_MAIL_SERVER: ${{ vars.MAIL_SERVER }}
+          APP_MAIL_PORT: ${{ vars.MAIL_PORT }}
+          APP_MAIL_USE_TLS: ${{ vars.MAIL_USE_TLS }}
+          APP_MAIL_USERNAME: ${{ vars.MAIL_USERNAME }}
+          APP_MAIL_PASSWORD: ${{ vars.MAIL_PASSWORD }}
+          APP_MAIL_DEFAULT_SENDER: ${{ vars.MAIL_DEFAULT_SENDER }}
+          APP_ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
+        run: gcloud run deploy ${{ env.CLOUD_RUN_SERVICE_NAME }} --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.CLOUD_RUN_SERVICE_NAME }}:${{ github.sha }} --region ${{ env.GCP_REGION }} --platform "managed" --allow-unauthenticated --vpc-connector ${{ env.VPC_CONNECTOR_PATH_VAR }} --vpc-egress all-traffic --service-account gcp-cloud-run-service-account@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com --set-env-vars "MONGO_URI=${{ env.APP_MONGO_URI }},SECRET_KEY=${{ env.APP_SECRET_KEY }},GCS_BUCKET_NAME=${{ env.APP_GCS_BUCKET_NAME }},IS_LOCAL_ENV=${{ env.APP_IS_LOCAL_ENV }},MAIL_SERVER=${{ env.APP_MAIL_SERVER }},MAIL_PORT=${{ env.APP_MAIL_PORT }},MAIL_USE_TLS=${{ env.APP_MAIL_USE_TLS }},MAIL_USERNAME=${{ env.APP_MAIL_USERNAME }},MAIL_PASSWORD=${{ env.APP_MAIL_PASSWORD }},MAIL_DEFAULT_SENDER=${{ env.APP_MAIL_DEFAULT_SENDER }},ADMIN_EMAILS=${{ env.APP_ADMIN_EMAILS }}" 

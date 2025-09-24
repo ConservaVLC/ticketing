@@ -5,3 +5,5 @@ admin_bp = Blueprint(
     template_folder='app/templates/admin',
     static_folder='static'
 )
+
+from . import routes

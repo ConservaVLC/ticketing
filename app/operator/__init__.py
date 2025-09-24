@@ -5,3 +5,5 @@ operator_bp = Blueprint(
     #template_folder='app/templates/operator',
     static_folder='static'
 )
+
+from . import routes

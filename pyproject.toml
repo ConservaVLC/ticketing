@@ -1,0 +1,4 @@
+[tool.ruff]
+# Ignora los errores F401 (importación no usada) y F402 (importación solapada)
+# específicamente en los archivos __init__.py.
+per-file-ignores = {"__init__.py" = ["F401", "F402"]}

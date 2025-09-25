@@ -8,10 +8,9 @@ from slugify import slugify
 import logging
 import pymongo
 from bson.objectid import ObjectId
-from datetime import datetime, timezone
+from datetime import datetime
 from io import BytesIO
 from openpyxl import Workbook
-from app.utils import log_ticket_history
 from app.supervisor.forms import TicketFilterForm # Import from supervisor for now
 
 logger = logging.getLogger(__name__)

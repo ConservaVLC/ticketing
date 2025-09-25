@@ -70,3 +70,7 @@ def conductor_required(f):
 def supervisor_or_admin_required(f):
     """Permite acceso a 'admin' o 'supervisor'."""
     return role_required(['admin', 'supervisor'])(f)
+
+def ticket_creator_required(f):
+    """Permite acceso a 'cliente', 'admin' o 'supervisor'."""
+    return role_required(['cliente', 'admin', 'supervisor'])(f)

@@ -31,28 +31,24 @@
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     {% if current_user.is_authenticated %}
                 
-                    {% if current_user.is_client %}
+                    {% if current_user.is_client or current_user.is_admin or current_user.is_supervisor %}
                     <li class="nav-item dropdown">
                         <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                             Tickets
                         </button>
                         <ul class="dropdown-menu">
+                            {% if current_user.is_client or current_user.is_admin or current_user.is_supervisor %}
                             <li class="dropdown-item"><a class="dropdown-item" href="{{ url_for('client_bp.create_ticket') }}">Crear ticket</a></li>
+                            {% endif %}
+                            {% if current_user.is_client %}
                             <li class="dropdown-item"><a class="dropdown-item" href="{{ url_for('client_bp.client_tickets') }}">Consultar tickets</a></li>
+                            {% endif %}
+                            {% if current_user.is_admin or current_user.is_supervisor %}
+                            <li class="dropdown-item"><a class="dropdown-item" href="{{ url_for('admin_bp.list_tickets') }}">Listado de tickets</a></li>
+                            {% endif %}
                         </ul>
                     </li> 
                     {% endif %} 
-                    
-                    {% if current_user.is_admin or current_user.is_supervisor %}
-                    <li class="nav-item dropdown">
-                        <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            Tickets
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li class="dropdown-item"><a class="dropdown-item" href="{{ url_for('supervisor_bp.list_tickets') }}">Listado de tickets</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
                     {% if current_user.is_admin %}
                     <li class="nav-item dropdown">
                         <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">

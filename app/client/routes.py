@@ -5,7 +5,7 @@ from app import mongo
 from .forms import RejectTicketForm, TicketForm, ClientDescriptionForm
 from app.supervisor.forms import TicketFilterForm # Asumimos que este form se adaptará o seguirá funcionando
 from datetime import datetime, timezone
-from app.auth.decorators import client_required
+from app.auth.decorators import client_required, ticket_creator_required
 import logging
 from bson.objectid import ObjectId
 from bson.errors import InvalidId
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @client_bp.route('/create_ticket', methods=['GET', 'POST'])
 @login_required
-@client_required
+@ticket_creator_required
 def create_ticket():
     form = TicketForm()
     try:

@@ -10,9 +10,16 @@
 {% block content %}
     <div class="container-fluid">
         <h1>Listado de Tickets</h1>
+        <div class="d-flex justify-content-end mb-3">
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin_bp.export_tickets_to_xlsx', **export_url_args) }}" class="btn btn-success">
+                <i class="fas fa-file-excel me-2"></i>Descargar en Excel
+            </a>
+            {% endif %}
+        </div>
         <hr>
 
-        <form method="GET" action="{{ url_for('supervisor_bp.list_tickets') }}">
+        <form method="GET" action="{{ url_for('admin_bp.list_tickets') }}">
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
@@ -28,9 +35,9 @@
                         <td>{{ form.operator_username(class="form-control form-control-sm", placeholder="Operador") }}</td>
                         <td>{{ form.start_date(class="form-control form-control-sm", type="date") }}</td>
                         <td>{{ form.end_date(class="form-control form-control-sm", type="date") }}</td>
-                        <td class="text-center">
+                        <td class="text-end d-flex justify-content-end align-items-center gap-2">
                             <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
-                            <a href="{{ url_for('supervisor_bp.list_tickets') }}" class="btn btn-sm btn-secondary">Limpiar</a>
+                            <a href="{{ url_for('admin_bp.list_tickets') }}" class="btn btn-sm btn-secondary">Limpiar</a>
                         </td>
                     </tr>
                     <tr>

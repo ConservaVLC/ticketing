@@ -22,6 +22,8 @@
                         <td>{{ form.search_title(class="form-control form-control-sm", placeholder="Título") }}</td>
                         <td>{{ form.category(class="form-select form-select-sm") }}</td>
                         <td>{{ form.status(class="form-select form-select-sm") }}</td>
+                        <td>{{ form.operator_username(class="form-control form-control-sm", placeholder="Operador") }}</td>
+                        <td>{{ form.supervisor_username(class="form-control form-control-sm", placeholder="Supervisor") }}</td>
                         <td>{{ form.start_date(class="form-control form-control-sm", type="date") }}</td>
                         <td>{{ form.end_date(class="form-control form-control-sm", type="date") }}</td>
                         <td class="text-center">
@@ -31,8 +33,8 @@
                     </tr>
                     <tr>
                         <th>ID</th>
-                        <th>Categoría</th>
                         <th>Título</th>
+                        <th>Categoría</th>
                         <th>Estado</th>
                         <th>Supervisor</th>
                         <th>Operador</th>
@@ -45,8 +47,8 @@
                     {% for ticket in tickets %}
                     <tr>
                         <td>{{ ticket._id | string | truncate(8, True, '...') }}</td>
-                        <td>{{ ticket.category_value | replace('-', ' ') | title }}</td>
                         <td>{{ ticket.title | truncate(50, True, '...') }}</td>
+                        <td>{{ ticket.category_value | replace('-', ' ') | title }}</td>
                         <td>
                             {% set status_class = {
                                 'cancelled': 'bg-danger',
@@ -74,8 +76,13 @@
             </table>
         </form>
         {% else %}
-            <p>No has cargado ningún ticket todavía.</p>
-            <a href="{{ url_for('client_bp.create_ticket') }}" class="btn btn-primary">Crear Nuevo Ticket</a>
+            {% if filters_active %}
+                <p>No se encontraron tickets que coincidan con los filtros aplicados.</p>
+                <a href="{{ url_for('client_bp.client_tickets') }}" class="btn btn-secondary">Limpiar Filtros</a>
+            {% else %}
+                <p>No has cargado ningún ticket todavía.</p>
+                <a href="{{ url_for('client_bp.create_ticket') }}" class="btn btn-primary">Crear Nuevo Ticket</a>
+            {% endif %}
         {% endif %}
     </div>
 {% endblock %}

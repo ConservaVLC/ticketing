@@ -1,65 +1,76 @@
 document.addEventListener('DOMContentLoaded', function() {
-        const confirmModal = new bootstrap.Modal(document.getElementById('confirmChangesModal'));
-        const modalConfirmButton = document.getElementById('modalConfirmButton');
-        const modalCancelButton = document.getElementById('modalCancelButton'); // Nuevo: botón 'Cancelar' del modal
-        
-        // Variable para guardar la referencia al botón original de envío o la URL de cancelación
-        let actionToPerform = null; 
+    const confirmModalElement = document.getElementById('confirmChangesModal');
+    if (!confirmModalElement) return;
 
-        // --- Manejo de botones de Envío (ya lo tienes) ---
-        const submitButtons = document.querySelectorAll('.confirm-submit-btn');
-        submitButtons.forEach(button => {
-            button.addEventListener('click', function(event) {
-                event.preventDefault(); 
-                // Almacenamos el botón de envío original para simular el clic más tarde
-                actionToPerform = { type: 'submit', button: this }; 
-                
-                // Opcional: Si quieres la lógica de 'solo si hay cambios' (la compleja)
-                // checkFormChanges(); 
-                // if (formHasChanged) { confirmModal.show(); } else { this.closest('form').submit(); }
-                
-                confirmModal.show(); // Siempre muestra el modal para enviar
-            });
-        });
+    const confirmModal = new bootstrap.Modal(confirmModalElement);
+    const modalConfirmButton = document.getElementById('modalConfirmButton');
 
-        // --- NUEVO: Manejo de botones/enlaces de Cancelar ---
-        const cancelButtons = document.querySelectorAll('.confirm-cancel-btn');
-        cancelButtons.forEach(button => {
-            button.addEventListener('click', function(event) {
-                event.preventDefault(); // Detiene la redirección por defecto
-                // Almacenamos la URL de redirección del botón de cancelar
-                actionToPerform = { type: 'redirect', url: this.href || '#' }; // Usa this.href si es un <a>, o un valor por defecto
-                
-                // El modal debería preguntar si desea *descartar* los cambios
-                // Podrías cambiar dinámicamente el texto del modal aquí si fuera necesario
-                document.getElementById('confirmChangesModalLabel').textContent = 'Confirmar Cancelación';
-                document.querySelector('#confirmChangesModal .modal-body').textContent = '¿Desea descartar los cambios realizados?';
+    let actionToPerform = null;
 
-                confirmModal.show();
-            });
-        });
+    document.body.addEventListener('click', function(event) {
+        const submitBtn = event.target.closest('.confirm-submit-btn');
+        if (submitBtn) {
+            event.preventDefault();
+            actionToPerform = { button: submitBtn };
 
-        // --- Lógica del botón "Confirmar" dentro del Modal ---
+            const modalTitle = submitBtn.dataset.modalTitle || 'Confirmar Cambios';
+            const modalBody = submitBtn.dataset.modalBody || '¿Confirma que desea realizar estos cambios?';
+            
+            document.getElementById('confirmChangesModalLabel').textContent = modalTitle;
+            document.querySelector('#confirmChangesModal .modal-body').textContent = modalBody;
+
+            confirmModal.show();
+        }
+    });
+
+    if (modalConfirmButton) {
         modalConfirmButton.addEventListener('click', function() {
-            confirmModal.hide(); 
+            if (!actionToPerform || !actionToPerform.button) return;
 
-            if (actionToPerform) {
-                if (actionToPerform.type === 'submit') {
-                    // Lógica para enviar el formulario (con tempButton.click())
+            const button = actionToPerform.button;
+            confirmModal.hide();
+
+            if (button.classList.contains('submit-via-dynamic-form')) {
+                const url = button.dataset.url;
+                const token = button.dataset.token;
+                if (!url || !token) {
+                    console.error('Dynamic form submission requires data-url and data-token attributes.');
+                    return;
+                }
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = token;
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
+
+            } else {
+                const form = button.closest('form');
+                if (form) {
                     const tempButton = document.createElement('button');
                     tempButton.style.display = 'none';
                     tempButton.type = 'submit';
-                    actionToPerform.button.closest('form').appendChild(tempButton);
+                    form.appendChild(tempButton);
                     tempButton.click();
                     setTimeout(() => {
-                        actionToPerform.button.closest('form').removeChild(tempButton);
+                        if (tempButton.parentNode === form) {
+                            form.removeChild(tempButton);
+                        }
                     }, 100);
-                } else if (actionToPerform.type === 'redirect' && actionToPerform.url) {
-                    window.location.href = actionToPerform.url; // Redirige a la URL almacenada
                 }
             }
-            // Restaurar texto original del modal para futuras interacciones
-            document.getElementById('confirmChangesModalLabel').textContent = 'Confirmar Cambios';
-            document.querySelector('#confirmChangesModal .modal-body').textContent = '¿Confirma que desea realizar estos cambios?';
+            
+            actionToPerform = null;
+
+            setTimeout(() => {
+                document.getElementById('confirmChangesModalLabel').textContent = 'Confirmar Cambios';
+                document.querySelector('#confirmChangesModal .modal-body').textContent = '¿Confirma que desea realizar estos cambios?';
+            }, 500);
         });
-    });
+    }
+});

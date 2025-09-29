@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Tickets sin Asignar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Tickets sin Asignar</h1>
+
+    {% if tickets %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Categoría</th>
+                    <th>Estado</th>
+                    <th>Creador</th>
+                    <th>Fecha de Creación</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>{{ ticket._id|string|truncate(8, True, '...') }}</td>
+                    <td>{{ ticket.title }}</td>
+                    <td>{{ category_map.get(ticket.category_value, ticket.category_value) }}</td>
+                    <td><span class="badge bg-warning text-dark">{{ status_map.get(ticket.status_value, ticket.status_value) }}</span></td>
+                    <td>{{ ticket.creator.username }}</td>
+                    <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('supervisor_bp.edit_ticket', ticket_id=ticket._id) }}" class="btn btn-primary btn-sm">Ver / Asignar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-success" role="alert">
+        <h4 class="alert-heading">¡Todo en orden!</h4>
+        <p>No hay tickets pendientes de asignación en este momento.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

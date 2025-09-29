@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Asignaciones Actuales de Supervisores</h2>
+            {% if assignments %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Turno</th>
+                            <th>Supervisor Asignado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                        <tr>
+                            <td>{{ assignment.category_name }}</td>
+                            <td>{{ assignment.shift_name }}</td>
+                            <td>{{ assignment.supervisor_name }}</td>
+                            <td>
+                                <form action="{{ url_for('admin_bp.delete_assignment', assignment_id=assignment._id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres borrar esta asignación?');">
+                                    {{ delete_form.hidden_tag() }}
+                                    <button type="submit" class="btn btn-danger btn-sm">Borrar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                No hay asignaciones de supervisores definidas todavía.
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <h2>Añadir Nueva Asignación</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_bp.manage_assignments') }}" novalidate>
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            <div class="form-control" style="height: 150px; overflow-y: auto;">
+                                {% for subfield in form.category %}
+                                    <div class="form-check">
+                                        {{ subfield(class="form-check-input") }}
+                                        {{ subfield.label(class="form-check-label") }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% for error in form.category.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.shift.label(class="form-label") }}
+                            {{ form.shift(class="form-select") }}
+                            {% for error in form.shift.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.supervisor.label(class="form-label") }}
+                            {{ form.supervisor(class="form-select") }}
+                            {% for error in form.supervisor.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {{ form.submit(class="btn btn-primary w-100") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

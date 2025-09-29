@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app.client import client_bp
 from app import mongo
-from .forms import RejectTicketForm, TicketForm, ClientDescriptionForm
+from .forms import RejectTicketForm, CreateTicketForm, ClientDescriptionForm
 from app.supervisor.forms import TicketFilterForm # Asumimos que este form se adaptará o seguirá funcionando
 from datetime import datetime, timezone
 from app.auth.decorators import client_required, ticket_creator_required
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @login_required
 @ticket_creator_required
 def create_ticket():
-    form = TicketForm()
+    form = CreateTicketForm()
     try:
         categories = list(mongo.db.categories.find().sort("name", 1))
         form.category.choices = [(cat["value"], cat["name"]) for cat in categories]
@@ -40,41 +40,44 @@ def create_ticket():
                 flash('Error crítico: El estado inicial "Pendiente" no existe.', 'danger')
                 return redirect(url_for('client_bp.create_ticket'))
 
-            # --- Lógica de asignación de supervisor por categoría (reimplementada) ---
-            # Obtener los supervisores específicos
-            supervisor_general_data = mongo.db.personas.find_one({"username": "supervisor_general"})
-            supervisor_delineante_data = mongo.db.personas.find_one({"username": "supervisor_delineante"})
-            supervisor_ingenieria_data = mongo.db.personas.find_one({"username": "supervisor_ingenieria"})
-
-            assignment_rules = {
-                'General': supervisor_general_data,
-                'Mantenimiento': supervisor_ingenieria_data,
-                'Redes': supervisor_ingenieria_data,
-                'Soporte Técnico': supervisor_ingenieria_data,
-                'Hardware': supervisor_ingenieria_data,
-                'Software': supervisor_ingenieria_data,
-                'Delineante': supervisor_delineante_data,
-                'Periodismo': supervisor_delineante_data,
-            }
+            # --- Nueva lógica de asignación de supervisor --- 
+            category_value = form.category.data
+            shift_value = form.shift.data
             
-            # Buscar la categoría seleccionada por su 'value' para obtener su 'name'
-            selected_category_doc = mongo.db.categories.find_one({"value": form.category.data})
-            selected_category_name = selected_category_doc['name'] if selected_category_doc else None
+            category_doc = mongo.db.categories.find_one({"value": category_value})
+            category_id = category_doc['_id'] if category_doc else None
 
-            assigned_supervisor_data = assignment_rules.get(selected_category_name)
-            
+            assigned_supervisor_data = None
+            recipients = []
+
+            if category_id:
+                assignment = mongo.db.supervisor_assignments.find_one({
+                    "category_id": category_id,
+                    "shift_value": shift_value
+                })
+
+                if assignment:
+                    supervisor_id = assignment.get('supervisor_id')
+                    assigned_supervisor_data = mongo.db.personas.find_one({"_id": supervisor_id})
+                    if assigned_supervisor_data:
+                        recipients = [assigned_supervisor_data['email']]
+                        logger.info(f"Ticket asignado automáticamente al supervisor '{assigned_supervisor_data['username']}' por regla.")
+
+            # --- Lógica de Fallback: si no se encontró asignación ---
+            if not assigned_supervisor_data:
+                flash('No se encontró una asignación de supervisor específica para este turno y categoría. El ticket queda pendiente de asignación.', 'info')
+                logger.info("Ticket no asignado a un supervisor específico por regla. Queda pendiente.")
+
+            # --- Fin de la nueva lógica de asignación ---
+
             assigned_supervisor_id = assigned_supervisor_data['_id'] if assigned_supervisor_data else None
             assigned_supervisor_username = assigned_supervisor_data['username'] if assigned_supervisor_data else None
-            assigned_supervisor_email = assigned_supervisor_data['email'] if assigned_supervisor_data else None
-
-            if not assigned_supervisor_id:
-                flash(f'No se encontró un supervisor para la categoría "{selected_category_name}". El ticket se creará sin asignar.', 'info')
-            # --- Fin Lógica de asignación ---
 
             new_ticket = {
                 "title": form.title.data,
                 "description": form.description.data,
                 "category_value": form.category.data,
+                "shift": form.shift.data,
                 "status_value": pending_status['value'],
                 "creator": {
                     "user_id": ObjectId(current_user.id),
@@ -95,21 +98,24 @@ def create_ticket():
 
             log_ticket_history(str(ticket_id), "Creación de Ticket", current_user, "Ticket creado por el cliente.")
 
-            # --- ENVÍO DE CORREO: Al supervisor asignado, cuando el cliente crea el ticket ---
-            if assigned_supervisor_id and assigned_supervisor_email:
+            # --- ENVÍO DE CORREO --- 
+            if recipients:
                 send_notification_email(
                     subject=f"Nuevo Ticket Creado: #{ticket_id}",
-                    recipients=[assigned_supervisor_email],
+                    recipients=recipients,
                     template='emails/ticket_created.html',
-                    ticket=new_ticket, # Pasar el diccionario del ticket
-                    supervisor_name=assigned_supervisor_username,
+                    ticket=new_ticket,
+                    supervisor_name=assigned_supervisor_username, # Será None si no hay asignado
                     client_name=current_user.username,
-                    status_map=status_map, # Pasar el status_map al email template
-                    category_map=category_map # Pasar el category_map al email template
+                    status_map=status_map,
+                    category_map=category_map
                 )
 
             flash('¡Ticket creado exitosamente!', 'success')
-            return redirect(url_for('client_bp.client_tickets'))
+            if current_user.role == 'cliente':
+                return redirect(url_for('client_bp.client_tickets'))
+            else:
+                return redirect(url_for('admin_bp.list_tickets'))
 
         except pymongo.errors.PyMongoError as e:
             logger.error(f"Error de base de datos al crear ticket: {e}", exc_info=True)
@@ -127,36 +133,6 @@ def client_tickets():
     form = TicketFilterForm(request.args)
     query = {"creator.user_id": ObjectId(current_user.id)}
     
-    # Lógica de filtrado para MongoDB
-    if form.validate():
-        if form.ticket_id.data:
-            try:
-                query["_id"] = ObjectId(form.ticket_id.data)
-            except InvalidId:
-                flash("ID de Ticket inválido.", "warning")
-        if form.search_title.data:
-            query["title"] = {"$regex": form.search_title.data, "$options": "i"}
-        if form.category.data:
-            query["category_value"] = form.category.data
-        if form.status.data:
-            query["status_value"] = form.status.data
-        # Filtros de fecha
-        if form.start_date.data or form.end_date.data:
-            query["created_at"] = {}
-            if form.start_date.data:
-                query["created_at"]["$gte"] = datetime.combine(form.start_date.data, datetime.min.time(), tzinfo=timezone.utc)
-            if form.end_date.data:
-                query["created_at"]["$lte"] = datetime.combine(form.end_date.data, datetime.max.time(), tzinfo=timezone.utc)
-
-    try:
-        tickets = list(mongo.db.tickets.find(query).sort("created_at", -1))
-        logger.info(f'Usuario {current_user.username} consultó sus tickets. Se encontraron {len(tickets)} tickets.')
-    except pymongo.errors.PyMongoError as e:
-        logger.error(f"Error al buscar tickets para el cliente {current_user.username}: {e}")
-        flash("Error al cargar los tickets.", "danger")
-        tickets = []
-
-    # Poblar los formularios de filtro (solo categorías y estados)
     try:
         statuses = list(mongo.db.statuses.find().sort("name", 1))
         form.status.choices = [('', 'Todos los Estados')] + [(s['value'], s['name']) for s in statuses]
@@ -172,7 +148,63 @@ def client_tickets():
         status_map = {}
         category_map = {}
 
-    return render_template('client/client_tickets.html', title='Mis Tickets', tickets=tickets, form=form, status_map=status_map, category_map=category_map)
+    # Lógica de filtrado para MongoDB
+    if request.args:
+        if form.validate():
+            if form.ticket_id.data:
+                try:
+                    query["_id"] = ObjectId(form.ticket_id.data)
+                except InvalidId:
+                    flash("ID de Ticket inválido.", "warning")
+            if form.search_title.data:
+                query["title"] = {"$regex": form.search_title.data, "$options": "i"}
+            if form.category.data:
+                query["category_value"] = form.category.data
+            if form.status.data:
+                query["status_value"] = form.status.data
+            if form.operator_username.data:
+                query["operator.username"] = {"$regex": form.operator_username.data, "$options": "i"}
+            if form.supervisor_username.data:
+                query["supervisor.username"] = {"$regex": form.supervisor_username.data, "$options": "i"}
+            
+            if form.start_date.data or form.end_date.data:
+                date_query = {}
+                if form.start_date.data and form.end_date.data:
+                    # Range query if both dates are provided
+                    date_query["$gte"] = datetime.combine(form.start_date.data, datetime.min.time())
+                    date_query["$lte"] = datetime.combine(form.end_date.data, datetime.max.time())
+                elif form.start_date.data:
+                    # Exact day query for start_date
+                    start = datetime.combine(form.start_date.data, datetime.min.time())
+                    end = datetime.combine(form.start_date.data, datetime.max.time())
+                    date_query["$gte"] = start
+                    date_query["$lte"] = end
+                elif form.end_date.data:
+                    # Exact day query for end_date
+                    start = datetime.combine(form.end_date.data, datetime.min.time())
+                    end = datetime.combine(form.end_date.data, datetime.max.time())
+                    date_query["$gte"] = start
+                    date_query["$lte"] = end
+
+                if date_query:
+                    query["created_at"] = date_query
+        else:
+            # Si la validación falla, por ejemplo, por fechas inválidas, limpiar los datos del formulario
+            # para evitar que se apliquen filtros incorrectos y mostrar el mensaje de error.
+            flash("Error en los filtros proporcionados. Por favor, revisa los valores.", "danger")
+            query = {"creator.user_id": ObjectId(current_user.id)} # Reset query to show all client's tickets
+
+
+    try:
+        tickets = list(mongo.db.tickets.find(query).sort("created_at", -1))
+        logger.info(f'Usuario {current_user.username} consultó sus tickets. Se encontraron {len(tickets)} tickets.')
+    except pymongo.errors.PyMongoError as e:
+        logger.error(f"Error al buscar tickets para el cliente {current_user.username}: {e}")
+        flash("Error al cargar los tickets.", "danger")
+        tickets = []
+
+    filters_active = any(key != '_' for key in request.args.keys())
+    return render_template('client/client_tickets.html', title='Mis Tickets', tickets=tickets, form=form, status_map=status_map, category_map=category_map, filters_active=filters_active)
 
 @client_bp.route('/client/ticket/<string:ticket_id>/manage', methods=['GET', 'POST'])
 @login_required
@@ -189,20 +221,22 @@ def client_manage_completed_ticket(ticket_id):
         flash('Ticket no encontrado o no tienes permiso para gestionarlo.', 'danger')
         return redirect(url_for('client_bp.client_tickets'))
 
-    # Asegurarse de que el ticket esté en un estado gestionable por el cliente
     if ticket['status_value'] not in ['completed', 'cancelled']:
         flash('Este ticket no está en un estado que requiera gestión del cliente (Completado o Cancelado).', 'warning')
         return redirect(url_for('client_bp.client_tickets'))
 
     form = RejectTicketForm()
+    status_map = {}
+    category_map = {}
 
     try:
         statuses = list(mongo.db.statuses.find().sort("name", 1))
         status_map = {s['value']: s['name'] for s in statuses}
+        categories = list(mongo.db.categories.find())
+        category_map = {c['value']: c['name'] for c in categories}
     except pymongo.errors.PyMongoError as e:
-        logger.error(f"Error al cargar estados: {e}")
-        flash("Error al cargar opciones de estado.", "warning")
-        status_map = {}
+        logger.error(f"Error al cargar datos para la página de gestión: {e}")
+        flash("Error al cargar opciones de la página.", "warning")
 
     if form.validate_on_submit():
         try:
@@ -219,10 +253,6 @@ def client_manage_completed_ticket(ticket_id):
 
             log_ticket_history(ticket_id, "Rechazo de Resolución", current_user, form.note.data)
             
-            # --- ENVÍO DE CORREO AL OPERADOR Y SUPERVISOR ---
-            # Adaptar la lógica de envío de correo para usar los datos del ticket de MongoDB
-            # ... (esta parte requiere más refactorización de la función send_notification_email y los datos del ticket)
-
             flash(f'Ticket #{ticket_id} rechazado exitosamente. El operador ha sido notificado.', 'success')
             return redirect(url_for('client_bp.client_tickets'))
 
@@ -234,7 +264,8 @@ def client_manage_completed_ticket(ticket_id):
                            title=f'Gestionar Ticket #{ticket_id}',
                            ticket=ticket,
                            form=form,
-                           status_map=status_map)
+                           status_map=status_map,
+                           category_map=category_map)
 
 @client_bp.route('/client_add_description/<string:ticket_id>', methods=['GET', 'POST'])
 @login_required

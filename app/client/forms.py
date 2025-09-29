@@ -1,12 +1,24 @@
 from flask_wtf import FlaskForm
-from wtforms import TextAreaField, SelectField, SubmitField, StringField
+from wtforms import TextAreaField, SelectField, SubmitField, StringField, RadioField
 from wtforms.validators import DataRequired, Length
 
-class TicketForm(FlaskForm):
+class CreateTicketForm(FlaskForm):
     # El campo 'category' ahora se poblará desde la ruta.
     category = SelectField('Categoría', validators=[DataRequired()], choices=[])
     title = StringField('Título de la tarea', validators=[DataRequired(), Length(min=5, max=100)])
     description = TextAreaField('Descripción de la tarea', validators=[DataRequired(), Length(min=10, max=500)])
+    shift = RadioField(
+        'Turno',
+        choices=[
+            ('weekday_morning', 'Mañana'),
+            ('weekday_afternoon', 'Tarde'),
+            ('weekday_night', 'Noche'),
+            ('weekend_morning', 'Mañana'),
+            ('weekend_afternoon', 'Tarde'),
+            ('weekend_night', 'Noche')
+        ],
+        validators=[DataRequired(message="Por favor, selecciona un turno.")]
+    )
     submit = SubmitField('Crear Ticket', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
 class ClientDescriptionForm(FlaskForm):

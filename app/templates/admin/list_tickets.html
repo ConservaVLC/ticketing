@@ -82,10 +82,21 @@
                             <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') if ticket.created_at else 'N/A' }}</td>
                             <td>{{ ticket.updated_at.strftime('%d/%m/%Y %H:%M') if ticket.updated_at else 'N/A' }}</td>
                             <td class="text-center">
-                                {% if not ticket.operator %}
-                                    <a href="{{ url_for('supervisor_bp.assign_ticket', ticket_id=ticket._id | string) }}" class="btn btn-sm btn-danger m-2">Asignar</a>
+                                {% if not ticket.supervisor %}
+                                    {% if current_user.is_supervisor or current_user.is_admin %}
+                                        <button type="button" class="btn btn-sm btn-success confirm-submit-btn submit-via-dynamic-form" 
+                                                data-url="{{ url_for('supervisor_bp.take_ticket', ticket_id=ticket._id) }}"
+                                                data-token="{{ csrf_token() }}"
+                                                data-modal-body="¿Desea asignarse este ticket?">
+                                            Tomar Ticket
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    {% if not ticket.operator %}
+                                        <a href="{{ url_for('supervisor_bp.assign_ticket', ticket_id=ticket._id | string) }}" class="btn btn-sm btn-danger m-2">Asignar</a>
+                                    {% endif %}
+                                    <a href="{{ url_for('supervisor_bp.edit_ticket', ticket_id=ticket._id | string) }}" class="btn btn-sm btn-warning m-2">Ver/Editar</a>
                                 {% endif %}
-                                <a href="{{ url_for('supervisor_bp.edit_ticket', ticket_id=ticket._id | string) }}" class="btn btn-sm btn-warning m-2">Ver/Editar</a>
                             </td>
                         </tr>
                         {% endfor %}

@@ -27,6 +27,13 @@ def edit_ticket(ticket_id):
         flash('Ticket no encontrado.', 'danger')
         return redirect(url_for('admin_bp.list_tickets'))
 
+    # --- Control de acceso para supervisores ---
+    if current_user.is_supervisor and not current_user.is_admin:
+        if ticket.get('supervisor') and ticket['supervisor']['user_id'] != ObjectId(current_user.id):
+            flash('No tienes permiso para editar este ticket, ya está asignado a otro supervisor.', 'danger')
+            return redirect(url_for('admin_bp.list_tickets'))
+    # --- Fin Control de acceso ---
+
     form = TicketEditForm(data=ticket) # Precargar el formulario con los datos del ticket
 
     # Poblar SelectFields del formulario
@@ -114,33 +121,45 @@ def assign_ticket(ticket_id):
         flash('Ticket no encontrado.', 'danger')
         return redirect(url_for('admin_bp.list_tickets'))
 
-    form = AssignTicketForm()
+    # --- Control de acceso para supervisores ---
+    if current_user.is_supervisor and not current_user.is_admin:
+        if ticket.get('supervisor') and ticket['supervisor']['user_id'] != ObjectId(current_user.id):
+            flash('No tienes permiso para asignar este ticket, ya está asignado a otro supervisor.', 'danger')
+            return redirect(url_for('admin_bp.list_tickets'))
+    # --- Fin Control de acceso ---
 
-    # Poblar SelectField de operadores
+    form = AssignTicketForm()
+    status_map = {}
+
+    # Poblar SelectField de operadores y status_map
     try:
         operators = list(mongo.db.personas.find({"role": "operador"}).sort("username", 1))
         form.operator.choices = [('', '--- Seleccionar Operador ---')] + [(str(p['_id']), p['username']) for p in operators]
+        
+        statuses = list(mongo.db.statuses.find())
+        status_map = {s['value']: s['name'] for s in statuses}
+
     except pymongo.errors.PyMongoError as e:
-        logger.error(f"Error al poblar operadores en assign_ticket: {e}")
-        flash("Error al cargar opciones de operador.", "warning")
+        logger.error(f"Error al poblar datos para la página de asignación: {e}")
+        flash("Error al cargar opciones para la asignación.", "warning")
 
     if form.validate_on_submit():
         try:
             operator_id = form.operator.data
-            if not operator_id: # Si no se seleccionó operador
+            if not operator_id:
                 flash('Por favor, selecciona un operador válido.', 'warning')
-                return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
+                return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket, status_map=status_map)
 
             operator_obj = mongo.db.personas.find_one({"_id": ObjectId(operator_id)})
             if not operator_obj:
                 flash('Operador seleccionado no válido.', 'danger')
-                return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
+                return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket, status_map=status_map)
 
             assigned_status = mongo.db.statuses.find_one({"value": "in_progress"})
             if not assigned_status:
                 flash('Error: El estado "En Progreso" no está configurado.', 'danger')
                 return redirect(url_for('admin_bp.list_tickets'))
-            
+
             update_data = {
                 "operator": {"user_id": operator_obj['_id'], "username": operator_obj['username']},
                 "status_value": assigned_status['value'],
@@ -160,4 +179,53 @@ def assign_ticket(ticket_id):
             logger.error(f"Error al asignar ticket {ticket_id}: {e}", exc_info=True)
             flash('Ocurrió un error al asignar el ticket.', 'danger')
 
-    return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket)
+    return render_template('supervisor/assign_ticket.html', title='Asignar Ticket', form=form, ticket=ticket, status_map=status_map)
+
+@supervisor_bp.route('/ticket/<string:ticket_id>/take', methods=['POST'])
+@login_required
+@supervisor_or_admin_required
+def take_ticket(ticket_id):
+    logger.info(f"--- Intento de tomar ticket {ticket_id} por usuario {current_user.username} ---")
+    try:
+        ticket = mongo.db.tickets.find_one({"_id": ObjectId(ticket_id)})
+
+        if not ticket:
+            logger.warning(f"Take Ticket: Ticket {ticket_id} no encontrado en la base de datos.")
+            flash('Ticket no encontrado.', 'danger')
+            return redirect(url_for('admin_bp.list_tickets'))
+
+        logger.info(f"Take Ticket: Ticket {ticket_id} encontrado.")
+
+        if ticket.get('supervisor'):
+            logger.warning(f"Take Ticket: Ticket {ticket_id} ya está asignado a {ticket.get('supervisor', {}).get('username')}.")
+            flash('Este ticket ya ha sido asignado a otro supervisor.', 'warning')
+            return redirect(url_for('admin_bp.list_tickets'))
+
+        # Asignar el supervisor actual al ticket
+        update_data = {
+            "supervisor": {
+                "user_id": ObjectId(current_user.id),
+                "username": current_user.username
+            },
+            "updated_at": datetime.now(timezone.utc)
+        }
+        logger.info(f"Take Ticket: Preparando la actualización para ticket {ticket_id} con los datos: {update_data}")
+
+        result = mongo.db.tickets.update_one({"_id": ObjectId(ticket_id)}, {"$set": update_data})
+        
+        logger.info(f"Take Ticket: Resultado de la actualización: matched_count={result.matched_count}, modified_count={result.modified_count}")
+
+        if result.modified_count == 1:
+            # Registrar en el historial
+            log_ticket_history(ticket_id, "Ticket Tomado", current_user, f"El supervisor {current_user.username} ha tomado el ticket.")
+            logger.info(f"Take Ticket: Historial registrado para ticket {ticket_id}.")
+            flash(f'Has tomado el ticket #{ticket_id}. Ahora está en tu lista de tickets.', 'success')
+        else:
+            logger.error(f"Take Ticket: La actualización del ticket {ticket_id} no modificó ningún documento.")
+            flash('Hubo un problema al intentar asignar el ticket. No se pudo actualizar.', 'danger')
+        
+    except Exception as e:
+        logger.error(f"Error excepcional al tomar el ticket {ticket_id}: {e}", exc_info=True)
+        flash('Ocurrió un error excepcional al intentar tomar el ticket.', 'danger')
+
+    return redirect(url_for('admin_bp.list_tickets'))

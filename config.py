@@ -49,4 +49,4 @@ class TestingConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
     # Usa una base de datos en memoria (mongomock) para que los tests sean rápidos y aislados.
-    MONGO_URI = "mongomock://localhost/testdb"
+    MONGO_URI = "mongodb://localhost:27017/testdb"

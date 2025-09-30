@@ -149,50 +149,43 @@ def client_tickets():
         category_map = {}
 
     # Lógica de filtrado para MongoDB
-    if request.args:
-        if form.validate():
-            if form.ticket_id.data:
-                try:
-                    query["_id"] = ObjectId(form.ticket_id.data)
-                except InvalidId:
-                    flash("ID de Ticket inválido.", "warning")
-            if form.search_title.data:
-                query["title"] = {"$regex": form.search_title.data, "$options": "i"}
-            if form.category.data:
-                query["category_value"] = form.category.data
-            if form.status.data:
-                query["status_value"] = form.status.data
-            if form.operator_username.data:
-                query["operator.username"] = {"$regex": form.operator_username.data, "$options": "i"}
-            if form.supervisor_username.data:
-                query["supervisor.username"] = {"$regex": form.supervisor_username.data, "$options": "i"}
-            
-            if form.start_date.data or form.end_date.data:
-                date_query = {}
-                if form.start_date.data and form.end_date.data:
-                    # Range query if both dates are provided
-                    date_query["$gte"] = datetime.combine(form.start_date.data, datetime.min.time())
-                    date_query["$lte"] = datetime.combine(form.end_date.data, datetime.max.time())
-                elif form.start_date.data:
-                    # Exact day query for start_date
-                    start = datetime.combine(form.start_date.data, datetime.min.time())
-                    end = datetime.combine(form.start_date.data, datetime.max.time())
-                    date_query["$gte"] = start
-                    date_query["$lte"] = end
-                elif form.end_date.data:
-                    # Exact day query for end_date
-                    start = datetime.combine(form.end_date.data, datetime.min.time())
-                    end = datetime.combine(form.end_date.data, datetime.max.time())
-                    date_query["$gte"] = start
-                    date_query["$lte"] = end
+    if form.ticket_id.data:
+        try:
+            query["_id"] = ObjectId(form.ticket_id.data)
+        except InvalidId:
+            flash("ID de Ticket inválido.", "warning")
+    if form.search_title.data:
+        query["title"] = {"$regex": form.search_title.data, "$options": "i"}
+    if form.category.data:
+        query["category_value"] = form.category.data
+    if form.status.data:
+        query["status_value"] = form.status.data
+    if form.operator_username.data:
+        query["operator.username"] = {"$regex": form.operator_username.data, "$options": "i"}
+    if form.supervisor_username.data:
+        query["supervisor.username"] = {"$regex": form.supervisor_username.data, "$options": "i"}
+    
+    if form.start_date.data or form.end_date.data:
+        date_query = {}
+        if form.start_date.data and form.end_date.data:
+            # Range query if both dates are provided
+            date_query["$gte"] = datetime.combine(form.start_date.data, datetime.min.time())
+            date_query["$lte"] = datetime.combine(form.end_date.data, datetime.max.time())
+        elif form.start_date.data:
+            # Exact day query for start_date
+            start = datetime.combine(form.start_date.data, datetime.min.time())
+            end = datetime.combine(form.start_date.data, datetime.max.time())
+            date_query["$gte"] = start
+            date_query["$lte"] = end
+        elif form.end_date.data:
+            # Exact day query for end_date
+            start = datetime.combine(form.end_date.data, datetime.min.time())
+            end = datetime.combine(form.end_date.data, datetime.max.time())
+            date_query["$gte"] = start
+            date_query["$lte"] = end
 
-                if date_query:
-                    query["created_at"] = date_query
-        else:
-            # Si la validación falla, por ejemplo, por fechas inválidas, limpiar los datos del formulario
-            # para evitar que se apliquen filtros incorrectos y mostrar el mensaje de error.
-            flash("Error en los filtros proporcionados. Por favor, revisa los valores.", "danger")
-            query = {"creator.user_id": ObjectId(current_user.id)} # Reset query to show all client's tickets
+        if date_query:
+            query["created_at"] = date_query
 
 
     try:

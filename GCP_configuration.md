@@ -73,49 +73,18 @@ Esta clave es un archivo JSON que se usará como secreto en GitHub.
 4.  Selecciona `JSON` como tipo de clave y haz clic en `CREAR`.
 5.  Se descargará un archivo JSON. **Guárdalo en un lugar seguro, ya que no podrás volver a descargarlo.** El contenido de este archivo se usará en un secreto de GitHub.
 
+## 6. Asignar Permisos a la Cuenta de Servicio de Runtime
+
+Esta es la cuenta de servicio que la aplicación usará mientras se ejecuta en Cloud Run (ej. `gcp-cloud-run-service-account`).
+
+1.  Ve a `IAM y administración > IAM`.
+2.  Busca la cuenta de servicio de runtime por su nombre.
+3.  Haz clic en el icono del lápiz para editar sus permisos.
+4.  **Añade el siguiente rol:**
+    *   **Usuario de Acceso a VPC sin Servidor (`roles/vpcaccess.user`):** Permiso específico y seguro para que la aplicación pueda usar el conector VPC.
+5.  Guarda los cambios.
+
 ## 7. Configurar la Red y el Acceso a Internet
-
-Estos pasos son cruciales para que Cloud Run tenga una IP de salida estática y pueda conectarse a MongoDB Atlas.
-
-### 7.1. Crear una Red VPC
-
-1.  Ve a `Red de VPC > Redes de VPC`.
-2.  Haz clic en `CREAR RED DE VPC`.
-3.  **Nombre:** `mongo-atlas-vpc`.
-4.  **Modo de creación de subred:** `Personalizado`.
-5.  **Nueva subred:**
-    *   **Nombre:** `mongo-atlas-subnet`.
-    *   **Región:** `us-central1` (o la misma región donde desplegarás Cloud Run).
-    *   **Rango de direcciones IP:** `10.8.0.0/28`.
-6.  Haz clic en `LISTO` y luego en `CREAR`.
-
-### 7.2. Crear un Conector de Acceso a VPC sin Servidor
-
-1.  Ve a `Red de VPC > Acceso a VPC sin servidor`.
-2.  Haz clic en `CREAR CONECTOR`.
-3.  **Nombre:** `mongo-cloud-run-connector`.
-4.  **Región:** `us-central1` (la misma que tu subred).
-5.  **Red:** Selecciona la red que creaste (`mongo-atlas-vpc`).
-6.  **Subred:** Selecciona la subred que creaste (`mongo-atlas-subnet`).
-7.  Haz clic en `CREAR`. La creación puede tardar unos minutos.
-
-### 7.3. Configurar Cloud NAT y Reservar la IP Estática
-
-1.  **Ir a Cloud NAT:**
-    *   Ve a `Servicios de red > Cloud NAT`.
-    *   Haz clic en `CREAR PUERTA DE ENLACE NAT`.
-2.  **Configurar la puerta de enlace:**
-    *   **Nombre:** `mongo-atlas-nat-gateway`.
-    *   **Red VPC:** `mongo-atlas-vpc`.
-    *   **Región:** `us-central1`.
-    *   **Cloud Router:** Haz clic en `Crear nuevo router`, asígnale un nombre (ej. `mongo-atlas-router`) y haz clic en `CREAR`.
-3.  **Asignar y reservar la IP:**
-    *   En la sección `Asignación de NAT`, selecciona `Manual`.
-    *   En `Direcciones IP de NAT`, haz clic en `Crear dirección IP`.
-    *   En el modal que aparece, asigna un **nombre** a la nueva IP, por ejemplo: `static-ip-mongo-gcp`.
-    *   Haz clic en `RESERVAR`.
-4.  **Finalizar:**
-    *   Haz clic en `CREAR` en la página principal de Cloud NAT.
 
 ## 8. Configurar MongoDB Atlas
 

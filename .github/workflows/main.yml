@@ -69,7 +69,7 @@ jobs:
       - name: Deploy to Cloud Run with VPC Connector
         env:
           # Define VPC_CONNECTOR_PATH here where env.GCP_REGION is available
-          VPC_CONNECTOR_PATH_VAR: projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ env.GCP_REGION }}/connectors/mongo-cloud-run-connector
+          VPC_CONNECTOR_PATH_VAR: projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ env.GCP_REGION }}/connectors/mongo-atlas-vpc
           # Application Environment Variables
           APP_MONGO_URI: ${{ secrets.MONGO_URI }}
           APP_SECRET_KEY: ${{ secrets.SECRET_KEY }}

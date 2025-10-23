@@ -25,7 +25,21 @@ Para que los servicios funcionen, debes habilitar las siguientes APIs en tu proy
     *   **Compute Engine API:** Necesaria para la configuración de la red VPC.
     *   **Serverless VPC Access API:** Para crear el conector VPC.
 
-## 3. Crear una Cuenta de Servicio (Service Account)
+## 3. Crear el Repositorio en Artifact Registry
+
+Este repositorio almacenará las imágenes de Docker de tu aplicación que se construirán en el pipeline de CI/CD.
+
+1.  Abre la terminal de Cloud Shell en la consola de GCP o usa una terminal local con `gcloud` instalado y autenticado.
+2.  Ejecuta el siguiente comando para crear el repositorio:
+
+    ```bash
+    gcloud artifacts repositories create ticketing-run-repo \
+        --repository-format=docker \
+        --location=us-central1 \
+        --description="Repositorio para las imágenes de Docker de la app de ticketing"
+    ```
+
+## 4. Crear una Cuenta de Servicio (Service Account)
 
 Esta cuenta será utilizada por GitHub Actions para autenticarse y desplegar en tu nombre.
 
@@ -35,19 +49,21 @@ Esta cuenta será utilizada por GitHub Actions para autenticarse y desplegar en 
 4.  **ID de la cuenta de servicio:** Se generará automáticamente.
 5.  Haz clic en `CREAR Y CONTINUAR`.
 
-## 4. Asignar Permisos a la Cuenta de Servicio
+## 5. Asignar Permisos a la Cuenta de Servicio
 
 Ahora, asigna los roles necesarios a la cuenta que acabas de crear:
 
 1.  En la sección `Otorga a esta cuenta de servicio acceso al proyecto`, haz clic en el campo `Selecciona un rol`.
 2.  Busca y añade los siguientes roles, uno por uno:
     *   **Cloud Run Admin (`roles/run.admin`):** Permisos completos para desplegar y gestionar la aplicación en Cloud Run.
-    *   **Storage Admin (`roles/storage.admin`):** Necesario para que Artifact Registry gestione los buckets de almacenamiento de imágenes.
+    *   **Artifact Registry Writer (`roles/artifactregistry.writer`):** Permite subir imágenes de Docker a Artifact Registry.
+    *   **Service Usage Admin (`roles/serviceusage.serviceUsageAdmin`):** Permite al pipeline habilitar APIs de GCP si no están activas.
     *   **Service Account User (`roles/iam.serviceAccountUser`):** Permite a la cuenta de servicio actuar en nombre de otras para el despliegue.
+    *   **Storage Admin (`roles/storage.admin`):** Necesario para que Artifact Registry gestione los buckets de almacenamiento de imágenes.
     *   **Compute Network User (`roles/compute.networkUser`):** Requerido para que Cloud Run use el conector VPC.
 3.  Haz clic en `CONTINUAR` y luego en `LISTO`.
 
-## 5. Generar una Clave para la Cuenta de Servicio
+## 6. Generar una Clave para la Cuenta de Servicio
 
 Esta clave es un archivo JSON que se usará como secreto en GitHub.
 
@@ -57,11 +73,11 @@ Esta clave es un archivo JSON que se usará como secreto en GitHub.
 4.  Selecciona `JSON` como tipo de clave y haz clic en `CREAR`.
 5.  Se descargará un archivo JSON. **Guárdalo en un lugar seguro, ya que no podrás volver a descargarlo.** El contenido de este archivo se usará en un secreto de GitHub.
 
-## 6. Configurar la Red y el Acceso a Internet
+## 7. Configurar la Red y el Acceso a Internet
 
 Estos pasos son cruciales para que Cloud Run tenga una IP de salida estática y pueda conectarse a MongoDB Atlas.
 
-### 6.1. Crear una Red VPC
+### 7.1. Crear una Red VPC
 
 1.  Ve a `Red de VPC > Redes de VPC`.
 2.  Haz clic en `CREAR RED DE VPC`.
@@ -73,7 +89,7 @@ Estos pasos son cruciales para que Cloud Run tenga una IP de salida estática y 
     *   **Rango de direcciones IP:** `10.8.0.0/28`.
 6.  Haz clic en `LISTO` y luego en `CREAR`.
 
-### 6.2. Crear un Conector de Acceso a VPC sin Servidor
+### 7.2. Crear un Conector de Acceso a VPC sin Servidor
 
 1.  Ve a `Red de VPC > Acceso a VPC sin servidor`.
 2.  Haz clic en `CREAR CONECTOR`.
@@ -83,7 +99,7 @@ Estos pasos son cruciales para que Cloud Run tenga una IP de salida estática y 
 6.  **Subred:** Selecciona la subred que creaste (`mongo-atlas-subnet`).
 7.  Haz clic en `CREAR`. La creación puede tardar unos minutos.
 
-### 6.3. Configurar Cloud NAT y Reservar la IP Estática
+### 7.3. Configurar Cloud NAT y Reservar la IP Estática
 
 1.  **Ir a Cloud NAT:**
     *   Ve a `Servicios de red > Cloud NAT`.
@@ -101,7 +117,7 @@ Estos pasos son cruciales para que Cloud Run tenga una IP de salida estática y 
 4.  **Finalizar:**
     *   Haz clic en `CREAR` en la página principal de Cloud NAT.
 
-## 7. Configurar MongoDB Atlas
+## 8. Configurar MongoDB Atlas
 
 1.  **Obtener la IP estática:** Ve a `Red de VPC > Direcciones IP` en GCP y copia la dirección IP externa de `static-ip-mongo-gcp`.
 2.  **Añadir IP a la lista de acceso:**
@@ -113,11 +129,11 @@ Estos pasos son cruciales para que Cloud Run tenga una IP de salida estática y 
     *   Ve a `Database`, haz clic en `Connect` en tu clúster.
     *   Selecciona `Drivers` y copia la cadena de conexión (Connection String). Asegúrate de reemplazar `<password>` con la contraseña real del usuario de la base de datos.
 
-## 8. Configurar Secretos y Variables en GitHub
+## 9. Configurar Secretos y Variables en GitHub
 
 En tu repositorio de GitHub, ve a `Settings > Secrets and variables > Actions`.
 
-### 8.1. Secrets
+### 9.1. Secrets
 
 Crea los siguientes `Repository secrets`:
 
@@ -131,7 +147,7 @@ Crea los siguientes `Repository secrets`:
 *   `MAIL_DEFAULT_SENDER`: El correo que aparecerá como remitente.
 *   `ADMIN_EMAILS`: Correos de los administradores, separados por comas.
 
-### 8.2. Variables
+### 9.2. Variables
 
 Crea las siguientes `Repository variables`:
 
@@ -139,7 +155,7 @@ Crea las siguientes `Repository variables`:
 *   `MAIL_PORT`: El puerto del servidor de correo (ej. `587`).
 *   `MAIL_USE_TLS`: `True` o `False`, dependiendo de la configuración de tu servidor.
 
-## 9. Desplegar la Aplicación
+## 10. Desplegar la Aplicación
 
 Una vez que todos los pasos anteriores estén completados, el despliegue se activará automáticamente cada vez que hagas un `push` a las ramas `main` o `dev`. También puedes activarlo manualmente:
 

@@ -10,4 +10,4 @@ def home():
         return redirect(url_for('auth.login'))
         
     user=current_user
-    return render_template('welcome.html', title='Inicio', user=user)
+    return render_template('index.html', title='Inicio', user=user)

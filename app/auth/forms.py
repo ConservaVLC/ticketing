@@ -1,7 +1,31 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectField
-from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length, Regexp, Optional
+from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length, Optional
+import re
+from markupsafe import Markup
 from app import mongo # Importamos el objeto mongo
+
+def password_complexity_validator(form, field):
+    password = field.data
+    errors = []
+
+    if len(password) < 15:
+        errors.append("La contraseña debe tener al menos 15 caracteres.")
+    if not re.search(r"\d", password):
+        errors.append("La contraseña debe contener al menos un número.")
+    if not re.search(r"[A-Z]", password):
+        errors.append("La contraseña debe contener al menos una letra mayúscula.")
+    if not re.search(r"[a-z]", password):
+        errors.append("La contraseña debe contener al menos una letra minúscula.")
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        errors.append("La contraseña debe contener al menos un carácter especial.")
+
+    if errors:
+        error_html = "".join([f"<li>{error}</li>" for error in errors])
+        mensaje_final = Markup(
+            f"La contraseña no cumple los siguientes requisitos:<ul>{error_html}</ul>"
+        )
+        raise ValidationError(mensaje_final)
 
 class RegistrationForm(FlaskForm):
     username = StringField('Nombre de Usuario', validators=[DataRequired(), Length(min=4, max=50)])
@@ -11,12 +35,13 @@ class RegistrationForm(FlaskForm):
     secondSurname = StringField('Segundo apellido', validators=[Optional(), Length(min=1, max=30)])
     role = SelectField("Tipo de usuario", choices=[], validators=[DataRequired()])
     email = StringField('Correo Electrónico', validators=[DataRequired(), Email()])
-    password = PasswordField('Contraseña', validators=[
-        DataRequired(),
-        Length(min=8, message='La contraseña debe tener al menos 8 caracteres.'),
-        Regexp(r'.*\d.*', message='La contraseña debe contener al menos un número.'),
-        Regexp(r'.*[!@#$%^&*(),.?":{}|<>].*', message='La contraseña debe contener al menos un carácter especial.')
-    ])
+    password = PasswordField(
+        "Contraseña",
+        validators=[
+            DataRequired(),
+            password_complexity_validator,
+        ],
+    )
     password2 = PasswordField('Repetir Contraseña', validators=[DataRequired(), EqualTo('password', message='Las contraseñas no coinciden.')])
     submit = SubmitField('Registrar usuario', render_kw={"class": "btn btn-primary confirm-submit-btn col-md-6"})
 
@@ -36,6 +61,15 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Recordarme')
     submit = SubmitField('Iniciar Sesión')
 
+class Verify2FAForm(FlaskForm):
+    code = StringField(
+        "Código de 6 dígitos", validators=[DataRequired(), Length(min=6, max=6)]
+    )
+    trust_device = BooleanField(
+        "Mantener sesión iniciada en este dispositivo (8 horas)"
+    )
+    submit = SubmitField("Verificar")
+
 class RequestResetPasswordForm(FlaskForm):
     email = StringField('Correo Electrónico', validators=[DataRequired(), Email()])
     submit = SubmitField('Solicitar Restablecimiento de Contraseña')
@@ -46,31 +80,32 @@ class RequestResetPasswordForm(FlaskForm):
             raise ValidationError('No hay cuenta con ese correo electrónico. Por favor, regístrate primero.')
 
 class ResetPasswordForm(FlaskForm):
-    password = PasswordField('Nueva Contraseña', validators=[
-        DataRequired(),
-        Length(min=8, message='La contraseña debe tener al menos 8 caracteres.'),
-        Regexp(r'.*\d.*', message='La contraseña debe contener al menos un número.'),
-        Regexp(r'.*[!@#$%^&*(),.?":{}|<>].*', message='La contraseña debe contener al menos un carácter especial.')
-    ])
+    password = PasswordField(
+        "Contraseña",
+        validators=[
+            DataRequired(),
+            password_complexity_validator,
+        ],
+    )
     password2 = PasswordField('Confirmar Nueva Contraseña', validators=[DataRequired(), EqualTo('password', message='Las contraseñas no coinciden.')])
     submit = SubmitField('Restablecer Contraseña')
 
 class ProfileEditForm(FlaskForm):
-    name = StringField('Primer Nombre', validators=[DataRequired(), Length(max=100)])
-    middleName = StringField('Segundo Nombre', validators=[Optional(), Length(max=100)])
-    firstSurname = StringField('Primer Apellido', validators=[DataRequired(), Length(max=100)])
-    secondSurname = StringField('Segundo Apellido', validators=[Optional(), Length(max=100)])
-    submit = SubmitField('Actualizar Perfil', render_kw={"class": "btn btn-primary confirm-submit-btn"})
-    role = StringField('Rol', render_kw={'readonly': True})
+    name = StringField('Primer Nombre', validators=[DataRequired(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
+    middleName = StringField('Segundo Nombre', validators=[Optional(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
+    firstSurname = StringField('Primer Apellido', validators=[DataRequired(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
+    secondSurname = StringField('Segundo Apellido', validators=[Optional(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
+    role = StringField('Rol', render_kw={'readonly': True, 'disabled': True})
 
 class ChangePasswordForm(FlaskForm):
     old_password = PasswordField('Contraseña Actual', validators=[DataRequired()])
-    new_password = PasswordField('Contraseña', validators=[
-        DataRequired(),
-        Length(min=8, message='La contraseña debe tener al menos 8 caracteres.'),
-        Regexp(r'.*\d.*', message='La contraseña debe contener al menos un número.'),
-        Regexp(r'.*[!@#$%^&*(),.?":{}|<>].*', message='La contraseña debe contener al menos un carácter especial.')
-    ])
+    new_password = PasswordField(
+        "Contraseña",
+        validators=[
+            DataRequired(),
+            password_complexity_validator,
+        ],
+    )
     new_password2 = PasswordField('Repetir Nueva Contraseña', validators=[DataRequired(), EqualTo('new_password', message='Las contraseñas no coinciden.')])
     submit = SubmitField('Cambiar Contraseña', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
@@ -81,12 +116,13 @@ class UserEditForm(FlaskForm):
     middleName = StringField('Segundo Nombre', validators=[Optional(), Length(max=100)])
     firstSurname = StringField('Primer Apellido', validators=[DataRequired(), Length(max=100)])
     secondSurname = StringField('Segundo Apellido', validators=[Optional(), Length(max=100)])
-    password = PasswordField('Nueva contraseña', validators=[
-        Optional(),
-        Length(min=8, message='La contraseña debe tener al menos 8 caracteres.'),
-        Regexp(r'.*\d.*', message='La contraseña debe contener al menos un número.'),
-        Regexp(r'.*[!@#$%^&*(),.?":{}|<>].*', message='La contraseña debe contener al menos un carácter especial.')
-    ])
+    password = PasswordField(
+        "Contraseña",
+        validators=[
+            Optional(),
+            password_complexity_validator,
+        ],
+    )
     confirm_password = PasswordField('Confirmar nueva contraseña', validators=[Optional(), EqualTo('password', message='Las contraseñas no coinciden.')])
     role = SelectField("Tipo de usuario", choices=(), validators=[DataRequired()])
     submit = SubmitField('Actualizar usuario', render_kw={"class": "btn btn-primary confirm-submit-btn col-md-6"})

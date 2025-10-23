@@ -11,12 +11,18 @@ from logging.handlers import RotatingFileHandler
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 import os
 import sys
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # --- Instancias de Extensiones ---
 login_manager = LoginManager()
 mail = Mail()
 mongo = PyMongo()
 csrf = CSRFProtect()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 
 # --- Funciones Auxiliares para Modularizar la Configuración ---
@@ -27,20 +33,20 @@ def init_app_extensions(app):
     """
     mail.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
 
     mongo_uri = app.config.get("MONGO_URI")
     if not mongo_uri:
         raise RuntimeError("FATAL: La variable de entorno MONGO_URI no está configurada.")
 
-    app.logger.info("Intentando conectar a MongoDB...")
-
     try:
         mongo.init_app(app)
         mongo.cx.server_info() # Fuerza la conexión para verificarla
-        app.logger.info("Conexión a MongoDB establecida exitosamente.")
     except (ConnectionFailure, ConfigurationError) as e:
         app.logger.error(f"Error al conectar o configurar MongoDB: {e}")
-        raise RuntimeError(f"No se pudo conectar a la base de datos: {e}")
+        # In a test environment, we might want to suppress this
+        if not app.testing:
+            raise RuntimeError(f"No se pudo conectar a la base de datos: {e}")
 
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
@@ -112,6 +118,7 @@ def configure_app_logging(app):
     app.logger.addHandler(stream_handler)
     app.logger.info("Logging inicializado")
 
+
 def register_app_error_handlers(app):
     """
     Registra los manejadores de errores HTTP globales.
@@ -127,11 +134,27 @@ def register_app_error_handlers(app):
     @app.errorhandler(404)
     def page_not_found_error(error):
         return render_template("errors/404.html"), 404
+    
+    @app.errorhandler(429)
+    def rate_limit_exceeded(error):
+        return render_template("errors/429.html"), 429
 
     @app.errorhandler(500)
     def internal_server_error(error):
         current_app.logger.error(f"Internal Server Error: {error}", exc_info=True)
         return render_template("errors/500.html"), 500
+
+def register_global_handlers(app):
+    """
+    Registra manejadores que se aplican a todas las peticiones de la aplicación.
+    """
+    from app.auth.decorators import check_password_expiration
+
+    @app.before_request
+    @check_password_expiration
+    def before_any_request():
+        """Esta función se ejecutará antes de cada solicitud en toda la aplicación."""
+        pass
 
 # --- Función de Fábrica de Aplicación (create_app) ---
 def create_app(config_class="development"):
@@ -140,17 +163,18 @@ def create_app(config_class="development"):
     """
     app = Flask(__name__)
 
-    config_map = {
-        'testing': TestingConfig,
-        'production': ProductionConfig,
-        'development': DevelopmentConfig
-    }
-    app.config.from_object(config_map.get(config_class, DevelopmentConfig))
+    if config_class == "testing":
+        app.config.from_object(TestingConfig)
+    elif config_class == "production":
+        app.config.from_object(ProductionConfig)
+    else:  # Default a 'development'
+        app.config.from_object(DevelopmentConfig)
 
     configure_app_logging(app)
     init_app_extensions(app)
     register_app_blueprints(app)
     register_app_error_handlers(app)
+    register_global_handlers(app)
 
     from app import commands as commands
     app.cli.add_command(commands.init_db_data_command)

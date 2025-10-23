@@ -59,18 +59,18 @@ def test_create_ticket_post(mock_send_email, logged_in_client, db, app):
         'role': supervisor.role,
         'password_hash': supervisor.password_hash
     }
-    supervisor_result = db.personas.insert_one(supervisor_dict)
+    supervisor_result = db.db.personas.insert_one(supervisor_dict)
     supervisor_id = supervisor_result.inserted_id
 
     # Mock category
-    category_result = db.categories.insert_one({'name': 'Test Category', 'value': 'test_category'})
+    category_result = db.db.categories.insert_one({'name': 'Test Category', 'value': 'test_category'})
     category_id = category_result.inserted_id
 
     # Mock status
-    db.statuses.insert_one({'name': 'Pending', 'value': 'pending'})
+    db.db.statuses.insert_one({'name': 'Pending', 'value': 'pending'})
 
     # Mock supervisor assignment
-    db.supervisor_assignments.insert_one({
+    db.db.supervisor_assignments.insert_one({
         'category_id': category_id,
         'shift_value': 'weekday_morning',
         'supervisor_id': supervisor_id
@@ -93,7 +93,7 @@ def test_create_ticket_post(mock_send_email, logged_in_client, db, app):
         assert '¡Ticket creado exitosamente!' in flashes[0][1]
 
     # Check that the ticket was created and assigned
-    ticket = db.tickets.find_one({'title': 'Test Ticket'})
+    ticket = db.db.tickets.find_one({'title': 'Test Ticket'})
     assert ticket is not None
     assert ticket['description'] == 'This is a test ticket.'
     assert ticket['supervisor']['user_id'] == supervisor_id
@@ -122,7 +122,7 @@ def test_create_ticket_post_invalid(logged_in_client, db, app):
     assert b"This field is required." in response.data
 
     # Check that no ticket was created
-    ticket = db.tickets.find_one({'description': 'This is a test ticket.'})
+    ticket = db.db.tickets.find_one({'description': 'This is a test ticket.'})
     assert ticket is None
 
 def test_create_ticket_post_no_pending_status(logged_in_client, db, app):
@@ -132,7 +132,7 @@ def test_create_ticket_post_no_pending_status(logged_in_client, db, app):
     THEN a critical error should be flashed
     """
     # Mock category, but not status
-    db.categories.insert_one({'name': 'Test Category', 'value': 'test_category'})
+    db.db.categories.insert_one({'name': 'Test Category', 'value': 'test_category'})
 
     form_data = {
         'title': 'Test Ticket',
@@ -151,7 +151,7 @@ def test_create_ticket_post_no_pending_status(logged_in_client, db, app):
         assert 'Error crítico: El estado inicial "Pendiente" no existe.' in flashes[0][1]
 
     # Check that no ticket was created
-    ticket = db.tickets.find_one({'title': 'Test Ticket'})
+    ticket = db.db.tickets.find_one({'title': 'Test Ticket'})
     assert ticket is None
 
 
@@ -201,19 +201,19 @@ def test_client_tickets_shows_only_client_tickets(logged_in_client, db, app):
     THEN only their own tickets should be displayed
     """
     # Get the logged-in client's user ID from the db
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
 
     # Ensure status and categories exist for the map
-    db.statuses.insert_many([
+    db.db.statuses.insert_many([
         {'name': 'Pending', 'value': 'pending'}
     ])
-    db.categories.insert_many([
+    db.db.categories.insert_many([
         {'name': 'Software', 'value': 'software'},
         {'name': 'Hardware', 'value': 'hardware'}
     ])
 
     # Create a ticket for the logged-in client
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         '_id': ObjectId(),
         'title': 'Client Ticket 1',
         'description': 'Description 1',
@@ -226,7 +226,7 @@ def test_client_tickets_shows_only_client_tickets(logged_in_client, db, app):
 
     # Create a ticket for another user
     other_user_id = ObjectId()
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         '_id': ObjectId(),
         'title': 'Other User Ticket',
         'description': 'Description Other',
@@ -250,7 +250,7 @@ def test_client_tickets_displays_ticket_details(logged_in_client, db, app):
     THEN key details of the ticket should be displayed
     """
     # Get the logged-in client's user ID from the db
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
 
     # Create a ticket for the logged-in client
     ticket_title = 'Detailed Client Ticket'
@@ -261,9 +261,9 @@ def test_client_tickets_displays_ticket_details(logged_in_client, db, app):
     ticket_category_value = 'network'
 
     # Add status to the statuses collection for the map to work
-    db.statuses.insert_one({'name': ticket_status_name, 'value': ticket_status_value})
+    db.db.statuses.insert_one({'name': ticket_status_name, 'value': ticket_status_value})
 
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         '_id': ObjectId(),
         'title': ticket_title,
         'description': ticket_description,
@@ -288,8 +288,8 @@ def test_client_tickets_no_tickets_message(logged_in_client, db, app):
     THEN an appropriate 'no tickets' message should be displayed
     """
     # Get the logged-in client's user ID from the db
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
-    db.tickets.delete_many({'creator.user_id': client_user_id}) # Clean up any existing tickets for this client
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
+    db.db.tickets.delete_many({'creator.user_id': client_user_id}) # Clean up any existing tickets for this client
 
     response = logged_in_client.get(url_for('client_bp.client_tickets'))
     assert response.status_code == 200
@@ -301,23 +301,23 @@ def test_client_tickets_filter_by_status(logged_in_client, db, app):
     WHEN they filter the tickets by status
     THEN only tickets with the matching status should be displayed
     """
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
 
     # Create statuses
-    db.statuses.insert_many([
+    db.db.statuses.insert_many([
         {'name': 'Pending', 'value': 'pending'},
         {'name': 'In Progress', 'value': 'in_progress'}
     ])
 
     # Create tickets with different statuses
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Pending Ticket Filter Test',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'status_value': 'pending',
         'created_at': datetime.now(timezone.utc),
         'updated_at': datetime.now(timezone.utc)
     })
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'In Progress Ticket Filter Test',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'status_value': 'in_progress',
@@ -343,17 +343,17 @@ def test_client_tickets_filter_by_title(logged_in_client, db, app):
     WHEN they filter the tickets by title
     THEN only tickets with a matching title should be displayed
     """
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
 
     # Create tickets with different titles
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Apple Ticket',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'status_value': 'pending',
         'created_at': datetime.now(timezone.utc),
         'updated_at': datetime.now(timezone.utc)
     })
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Banana Ticket',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'status_value': 'pending',
@@ -376,28 +376,27 @@ def test_client_tickets_filter_by_title(logged_in_client, db, app):
 
 
 
-
 def test_client_tickets_filter_by_operator(logged_in_client, db, app):
     """
     GIVEN a logged-in client with multiple tickets
     WHEN they filter the tickets by operator username
     THEN only tickets with the matching operator should be displayed
     """
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
-    operator = db.personas.find_one({'role': 'operador'})
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
+    operator = db.db.personas.find_one({'role': 'operador'})
     if not operator:
-        db.personas.insert_one({'username': 'op_filter_test', 'role': 'operador'})
-        operator = db.personas.find_one({'username': 'op_filter_test'})
+        db.db.personas.insert_one({'username': 'op_filter_test', 'role': 'operador'})
+        operator = db.db.personas.find_one({'username': 'op_filter_test'})
 
     # Create tickets with different operators
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Ticket With Operator',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'operator': {'user_id': operator['_id'], 'username': operator['username']},
         'created_at': datetime.now(timezone.utc),
         'updated_at': datetime.now(timezone.utc)
     })
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Ticket Without Operator',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'operator': None,
@@ -420,23 +419,23 @@ def test_client_tickets_filter_by_category(logged_in_client, db, app):
     WHEN they filter the tickets by category
     THEN only tickets with the matching category should be displayed
     """
-    client_user_id = db.personas.find_one({'username': 'testuser'})['_id']
+    client_user_id = db.db.personas.find_one({'username': 'testuser'})['_id']
 
     # Create categories
-    db.categories.insert_many([
+    db.db.categories.insert_many([
         {'name': 'Hardware', 'value': 'hardware'},
         {'name': 'Software', 'value': 'software'}
     ])
 
     # Create tickets with different categories
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Hardware Ticket',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'category_value': 'hardware',
         'created_at': datetime.now(timezone.utc),
         'updated_at': datetime.now(timezone.utc)
     })
-    db.tickets.insert_one({
+    db.db.tickets.insert_one({
         'title': 'Software Ticket',
         'creator': {'user_id': client_user_id, 'username': 'testuser'},
         'category_value': 'software',

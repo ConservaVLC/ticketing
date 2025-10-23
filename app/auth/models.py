@@ -37,6 +37,8 @@ from flask_login import UserMixin
 from itsdangerous import URLSafeTimedSerializer as TimedSerializer
 from flask import current_app
 from bson.objectid import ObjectId
+from datetime import datetime, timedelta
+import random
 
 class Role:
     """Clase simple para representar un Rol. No es un modelo de base de datos."""
@@ -48,7 +50,7 @@ class Role:
         return f"<Role '{self.name}'>"
 
 class Persona(UserMixin):
-    def __init__(self, username, email, name, firstSurname, password="", _id=None, middleName="", secondSurname="", role="cliente", password_hash=None, **kwargs):
+    def __init__(self, username, email, name, firstSurname, password="", _id=None, middleName="", secondSurname="", role="cliente", password_hash=None, password_changed_at=None, two_factor_code=None, two_factor_code_expiration=None, **kwargs):
         self.username = username
         self.email = email
         self.name = name
@@ -67,12 +69,33 @@ class Persona(UserMixin):
         else:
             self.password_hash = None
 
+        self.password_changed_at = password_changed_at
+        self.two_factor_code = two_factor_code
+        self.two_factor_code_expiration = two_factor_code_expiration
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.password_changed_at = datetime.utcnow()
 
     def check_password(self, password):
         if self.password_hash:
             return check_password_hash(self.password_hash, password)
+        return False
+
+    def generate_2fa_code(self):
+        """Genera un código 2FA de 6 dígitos y establece su expiración."""
+        self.two_factor_code = str(random.randint(100000, 999999))
+        self.two_factor_code_expiration = datetime.utcnow() + timedelta(minutes=10)
+
+    def check_2fa_code(self, code):
+        """Verifica si el código 2FA proporcionado es válido y no ha expirado."""
+        if (
+            self.two_factor_code
+            and self.two_factor_code_expiration
+            and datetime.utcnow() < self.two_factor_code_expiration
+            and self.two_factor_code == code
+        ):
+            return True
         return False
 
     def get_reset_password_token(self, expires_in=600):

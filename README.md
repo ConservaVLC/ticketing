@@ -4,16 +4,16 @@ Este proyecto es una aplicación web full-stack desarrollada en Flask para la ge
 
 ## Características Principales
 
-- **Autenticación y Roles de Usuario:** Sistema de inicio de sesión seguro con diferentes niveles de permiso:
-    - **Cliente:** Puede crear nuevos tickets, ver el estado de sus tickets, añadir comentarios y cerrar tickets resueltos.
-    - **Operador:** Puede ver y gestionar los tickets que le han sido asignados, cambiar su estado y añadir notas.
-    - **Supervisor:** Tiene una vista general de todos los tickets. Puede asignar tickets a los operadores, editar cualquier ticket y filtrar el listado.
-    - **Administrador:** Tiene control total sobre el sistema, incluyendo la gestión de usuarios y categorías de tickets.
+- **Autenticación y Seguridad Avanzada:** Sistema de inicio de sesión robusto con múltiples capas de seguridad:
+    - **Control de Acceso Basado en Roles (RBAC):** Permisos estrictos para Clientes, Operadores, Supervisores y Administradores.
+    - **Autenticación de Dos Factores (2FA):** Verificación por correo electrónico como segundo paso obligatorio para iniciar sesión.
+    - **Expiración de Contraseña:** Política de seguridad que requiere el cambio de contraseña cada 45 días.
+    - **Límite de Tasa (Rate Limiting):** Protección contra ataques de fuerza bruta en la pantalla de login.
 - **Gestión de Tickets:** Flujo de trabajo completo desde la creación hasta el cierre del ticket, pasando por estados como "Pendiente", "En Progreso", "Completado", "Rechazado" y "Cerrado".
 - **Historial de Cambios:** Cada ticket registra un historial detallado de todas las modificaciones, incluyendo cambios de estado, asignaciones y notas, indicando qué usuario realizó el cambio y cuándo.
-- **Notificaciones por Correo:** Envío automático de correos electrónicos para notificar eventos clave, como la creación de un ticket, la asignación a un operador o la actualización de su estado.
-- **Filtro y Exportación:** Los supervisores y administradores pueden filtrar la lista de tickets por múltiples criterios (estado, categoría, fecha, etc.) y exportar los resultados a un archivo Excel (.xlsx).
-- **Despliegue con Docker:** El proyecto está completamente configurado para ser desplegado fácilmente usando Docker y Docker Compose, aislando la aplicación y su base de datos.
+- **Notificaciones por Correo:** Envío automático de correos electrónicos para notificar eventos clave (creación, asignación, actualización, etc.).
+- **Filtro y Exportación:** Los supervisores y administradores pueden filtrar la lista de tickets por múltiples criterios y exportar los resultados a un archivo Excel (.xlsx).
+- **Contenerización:** El proyecto está completamente configurado para ser desplegado fácilmente usando Docker y Docker Compose.
 
 ## Stack Tecnológico
 
@@ -21,97 +21,79 @@ Este proyecto es una aplicación web full-stack desarrollada en Flask para la ge
 - **Base de Datos:** MongoDB (con Flask-PyMongo)
 - **Frontend:** HTML, CSS, JavaScript, Jinja2 (motor de plantillas de Flask)
 - **Contenerización:** Docker, Docker Compose
+- **Calidad y Testing:**
+    - `pytest`: Framework para pruebas unitarias y de integración.
+    - `ruff`: Linter y formateador de código para garantizar un estilo consistente.
 - **Librerías Python Clave:**
     - `Flask-Login`: Manejo de sesiones de usuario.
-    - `Flask-WTF`: Creación y validación de formularios.
+    - `Flask-WTF`: Creación y validación de formularios (incluye protección CSRF).
     - `Flask-PyMongo`: Interacción con la base de datos MongoDB.
     - `Flask-Mail`: Envío de correos electrónicos.
+    - `Flask-Limiter`: Límite de peticiones (Rate Limiting) para proteger endpoints.
+    - `werkzeug.security`: Hashing y verificación de contraseñas.
+    - `itsdangerous`: Generación de tokens seguros para reseteo de contraseña.
     - `openpyxl`: Generación de reportes en formato `.xlsx`.
 
 ---
 
-## Instalación y Ejecución
+## Despliegue y Ejecución
 
-### Opción 1: Usando Docker (Recomendado)
+### Despliegue en Producción (CI/CD con GitHub Actions)
 
-Este es el método más sencillo para levantar todo el entorno, incluyendo la base de datos.
+El despliegue en el entorno de producción (Google Cloud Run) está **completamente automatizado** a través de un pipeline de Integración y Despliegue Continuo (CI/CD) utilizando GitHub Actions.
 
-**Requisitos:**
-- Docker
-- Docker Compose
+- **Activación:** El pipeline se ejecuta automáticamente con cada `push` a las ramas `main` y `dev`.
+- **Proceso:**
+    1.  Verificación de calidad de código con `ruff`.
+    2.  Ejecución de la suite de tests con `pytest`.
+    3.  Construcción y publicación de la imagen Docker en Artifact Registry.
+    4.  Despliegue de la nueva versión en Google Cloud Run.
 
-**Pasos:**
+La configuración detallada del pipeline se encuentra en `.github/workflows/main.yml`.
 
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone <URL-DEL-REPOSITORIO>
-    cd ticketing
-    ```
+Para la configuración inicial del entorno de GCP desde cero (creación de proyecto, APIs, service accounts, redes, etc.), consulta la guía detallada:
 
-2.  **Configurar variables de entorno (opcional):**
-    Si necesitas configurar variables de entorno adicionales (ej. para correo electrónico), crea un archivo `.env` en la raíz del proyecto. Para la base de datos, la `MONGO_URI` ya está configurada en `docker-compose.yml` para desarrollo.
+- **[GCP_configuration.md](GCP_configuration.md):** Contiene el paso a paso completo para preparar la infraestructura en Google Cloud antes del primer despliegue.
 
-3.  **Construir y ejecutar los contenedores:**
-    Desde la raíz del proyecto, ejecuta:
-    ```bash
-    docker-compose up --build
-    ```
-    Este comando construirá la imagen de la aplicación Flask, iniciará un contenedor para la base de datos MongoDB y otro para la aplicación. La aplicación será accesible en `http://localhost:5000`.
+### Entorno de Desarrollo Local
 
-4.  **Inicializar la base de datos (solo la primera vez):**
-    El comando `docker-compose up` ya ejecuta `flask init-db-data` automáticamente al iniciar el contenedor `tickets_web`, lo que se encarga de la inicialización de la base de datos y la creación de datos iniciales. No se requieren pasos manuales adicionales para la base de datos.
+A continuación se describen los métodos para levantar un entorno de desarrollo local.
 
-### Opción 2: Ejecución Local (Sin Docker)
+**Opción 1: Usando Docker (Recomendado)**
 
-**Requisitos:**
-- Python 3.8+
-- Un servidor de MongoDB instalado y en ejecución.
+Este es el método más sencillo para replicar el entorno de producción localmente.
 
-**Pasos:**
+- **Requisitos:** Docker, Docker Compose.
+- **Pasos:**
+    1.  Clona el repositorio: `git clone <URL-DEL-REPOSITORIO> && cd ticketing`
+    2.  Construye y ejecuta los contenedores: `docker-compose up --build`
 
-1.  **Clonar el repositorio e instalar dependencias:**
-    ```bash
-    git clone <URL-DEL-REPOSITORIO>
-    cd ticketing
-    python -m venv venv
-    source venv/bin/activate  # En Windows: venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
+La aplicación estará disponible en `http://localhost:5000`. La base de datos se inicializa automáticamente gracias al comando `flask init-db-data` en el `docker-compose.yml`.
 
-2.  **Configurar variables de entorno:**
-    Crea un archivo `.env` en la raíz del proyecto y configúralo para que apunte a tu base de datos local de MongoDB.
-    ```env
-    # .env
-    SECRET_KEY=un-secreto-muy-fuerte
+**Opción 2: Ejecución Nativa (Sin Docker)**
 
-    # Configuración de MongoDB
-    MONGO_URI="mongodb://localhost:27017/ticketing_db" # Ajusta según tu configuración local
-
-    # Configuración de email (ejemplo para Gmail)
-    MAIL_SERVER=smtp.googlemail.com
-    MAIL_PORT=587
-    MAIL_USE_TLS=True
-    MAIL_USERNAME=tu_correo@gmail.com
-    MAIL_PASSWORD=tu_contraseña_de_aplicacion
-    ```
-
-3.  **Inicializar la base de datos (solo la primera vez):**
-    ```bash
-    flask init-db-data  # Para crear colecciones y datos iniciales
-    ```
-
-4.  **Ejecutar la aplicación:**
-    ```bash
-    flask run
-    ```
-    La aplicación estará disponible en `http://localhost:5000`.
+- **Requisitos:** Python 3.8+, MongoDB local.
+- **Pasos:**
+    1.  Crea un entorno virtual y activa: `python -m venv venv && source venv/bin/activate` (o `venv\Scripts\activate` en Windows).
+    2.  Instala las dependencias: `pip install -r requirements.txt`.
+    3.  Configura tus variables de entorno en un archivo `.env` (ver ejemplo en la sección de configuración).
+    4.  Inicializa la base de datos: `flask init-db-data`.
+    5.  Ejecuta la aplicación: `flask run`.
 
 ## Ejecución de Pruebas
 
-Para ejecutar el conjunto de pruebas unitarias, utiliza `pytest`:
+Para ejecutar el conjunto de pruebas unitarias, asegúrate de tener las dependencias de desarrollo instaladas y utiliza `pytest`:
 ```bash
 pytest
 ```
+
+## Guía para Desarrolladores
+
+Este `README.md` proporciona una visión general del proyecto. Sin embargo, para contribuir al código, es **mandatorio** consultar el siguiente documento:
+
+- **[AGENTS.md](AGENTS.md):** Contiene las directrices técnicas, patrones de arquitectura, flujos de trabajo detallados (como 2FA y RBAC), y las reglas de calidad y seguridad que todo desarrollador debe seguir.
+
+Este documento es la fuente de verdad para la arquitectura y las convenciones del proyecto.
 
 ## Configuración para Despliegue en Google Cloud Run con MongoDB Atlas
 

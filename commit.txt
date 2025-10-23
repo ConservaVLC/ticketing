@@ -1,0 +1,33 @@
+feat: Advanced Security Implementation and UX Improvement
+
+The following features and improvements have been implemented in the `ticketing` project:
+
+- **Security:**
+  - **Two-Factor Authentication (2FA):** Integrated into the login flow, with code generation and verification via email.
+  - **Password Expiration:** Forced password change every 45 days, with redirection to the change password page if expired.
+  - **Robust Password Policy:** Implemented a password complexity validator (minimum 15 characters, uppercase, lowercase, numbers, special characters).
+  - **Rate Limiting:** Adjusted to "10 per minute" on the login endpoint to prevent brute-force attacks.
+  - **`AttributeError` Fix:** Ensured correct initialization of security attributes in the `Persona` constructor and in user creation via CLI command.
+
+- **Refactoring and Consistency:**
+  - **`ticket_creator_required` Decorator:** Removed and replaced by direct use of `role_required(['cliente', 'admin', 'supervisor'])` for clarity and flexibility.
+  - **User Profile View:** Converted to read-only (`/profile/view`), removing direct editing functionality by the user and making fields `readonly` and `disabled` in the form.
+
+- **User Experience (UX):**
+  - **Role-Based Home Page:** Implemented a home page (`/`) that displays specific content and action buttons for each user role (Client, Operator, Supervisor, Administrator), improving navigation and information relevance.
+  - **Button Consistency:** Ensured the presence of buttons on the home page for all main actions available in the navigation menu (`base.html`).
+
+- **Documentation:**
+  - **`AGENTS.md`:** Created an AI agent guide file, detailing the project profile, tech stack, infrastructure, structure, architectural patterns, and general directives, based on the `registro_horas` project.
+
+---
+
+feat: Update CI/CD pipeline and fix tests
+
+- Updated the GitHub Actions workflow (`main.yml`) to align with the other project.
+- Created `requirements-dev.txt` to separate development dependencies.
+- Fixed all failing tests by:
+    - Correcting fixture names and adding missing fixtures.
+    - Fixing database access in client tests.
+    - Resolving issues with `current_user` in authentication tests.
+    - Correcting assertions for flash messages.

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-5 text-center">Bienvenido {{user.name}}</h1>
+
+    <!-- Sección para Clientes -->
+    {% if current_user.is_client %}
+    <div class="row mb-5">
+        <h2 class="border-bottom pb-2 mb-3">Mis Tickets</h2>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('client_bp.create_ticket') }}" class="btn btn-outline-primary p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-ticket-perforated" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Crear Nuevo Ticket</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('client_bp.client_tickets') }}" class="btn btn-outline-primary p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-list-task" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Ver Mis Tickets</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sección para Operadores -->
+    {% if current_user.is_operator %}
+    <div class="row mb-5">
+        <h2 class="border-bottom pb-2 mb-3">Gestión de Operador</h2>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('operator_bp.operator_tickets') }}" class="btn btn-outline-success p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-person-workspace" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Tickets Asignados</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sección para Supervisores -->
+    {% if current_user.is_supervisor %}
+    <div class="row mb-5">
+        <h2 class="border-bottom pb-2 mb-3">Gestión de Supervisor</h2>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('admin_bp.list_tickets') }}" class="btn btn-outline-info p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-eye" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Ver Todos los Tickets</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('admin_bp.manage_assignments') }}" class="btn btn-outline-info p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-person-lines-fill" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Gestionar Asignaciones</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sección para Administradores -->
+    {% if current_user.is_admin %}
+    <div class="row mb-5">
+        <h2 class="border-bottom pb-2 mb-3">Administración del Sistema</h2>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('client_bp.create_ticket') }}" class="btn btn-outline-danger p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-ticket-perforated" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Crear Nuevo Ticket</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('admin_bp.list_tickets') }}" class="btn btn-outline-danger p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-eye" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Ver Todos los Tickets</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-danger p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-person-plus" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Registrar Nuevo Usuario</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('auth.list_users') }}" class="btn btn-outline-danger p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-people" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Listado de Usuarios</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('admin_bp.list_categories') }}" class="btn btn-outline-danger p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-tags" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Gestionar Categorías</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('admin_bp.manage_assignments') }}" class="btn btn-outline-danger p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-person-lines-fill" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Gestionar Asignaciones</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sección General de Perfil (para todos los usuarios autenticados) -->
+    {% if current_user.is_authenticated %}
+    <div class="row mb-5">
+        <h2 class="border-bottom pb-2 mb-3">Mi Perfil</h2>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('auth.edit_profile') }}" class="btn btn-outline-secondary p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-person-circle" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Ver Mi Perfil</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-secondary p-3 shadow-sm w-100 h-100 d-flex flex-column justify-content-center align-items-center rounded-4">
+                <i class="bi bi-key" style="font-size: 3rem"></i>
+                <br>
+                <span class="fs-6">Cambiar Contraseña</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

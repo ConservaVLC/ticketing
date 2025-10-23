@@ -2,6 +2,7 @@
 
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
@@ -12,7 +13,10 @@ class Config:
     Las variables críticas no tienen valor por defecto para forzar su definición
     en los entornos, lo cual es una práctica de seguridad recomendada.
     """
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "a-very-secret-key-for-development"
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+
+    # Duración de la cookie "Recuérdame"
+    REMEMBER_COOKIE_DURATION = timedelta(hours=8)
 
     # Configuración de Correo Electrónico para Flask-Mail
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
@@ -45,8 +49,10 @@ class ProductionConfig(Config):
 
 
 class TestingConfig(Config):
-    """Configuración para el entorno de pruebas."""
     TESTING = True
+    SECRET_KEY = "test-secret-key"
     WTF_CSRF_ENABLED = False
-    # Usa una base de datos en memoria (mongomock) para que los tests sean rápidos y aislados.
-    MONGO_URI = "mongodb://localhost:27017/testdb"
+    MONGO_URI = (
+        os.environ.get("TEST_MONGO_URI")
+        or "mongodb://localhost:27017/registro_horas_test"
+    )

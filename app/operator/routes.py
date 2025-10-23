@@ -5,7 +5,7 @@ from app import mongo
 from app.supervisor.forms import TicketFilterForm
 from app.operator.forms import OperatorTicketForm
 from datetime import datetime, timezone
-from app.auth.decorators import operador_required
+from app.auth.decorators import operator_required
 import logging
 from bson.objectid import ObjectId
 import pymongo
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @operator_bp.route('/operator_tickets', methods=['GET', 'POST'])
 @login_required
-@operador_required
+@operator_required
 def operator_tickets():
     form = TicketFilterForm(request.args)
     query = {"operator.user_id": ObjectId(current_user.id)}
@@ -49,7 +49,7 @@ def operator_tickets():
 
 @operator_bp.route('/operator_ticket_detail/<string:ticket_id>', methods=['GET', 'POST'])
 @login_required
-@operador_required
+@operator_required
 def operator_ticket_detail(ticket_id):
     try:
         ticket = mongo.db.tickets.find_one({"_id": ObjectId(ticket_id), "operator.user_id": ObjectId(current_user.id)})

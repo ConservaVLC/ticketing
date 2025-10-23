@@ -5,6 +5,9 @@ from app import mongo
 from app.auth.models import Persona
 import click
 import pymongo
+import secrets
+import string
+from datetime import datetime
 
 @click.command("init-db-data")
 @with_appcontext
@@ -63,7 +66,7 @@ def init_db_data_command():
 
         # --- Cargar Usuarios de Ejemplo (incluyendo supervisores específicos) ---
         users_to_create_data = [
-            {'username': 'admin', 'name': 'Admin', 'firstSurname': 'User', 'email': 'admin@example.com', 'role': 'admin'},
+            {'username': 'admin', 'name': 'Admin', 'firstSurname': 'User', 'email': 'lrguardamagna.etra@grupoetra.com', 'role': 'admin'},
             {'username': 'supervisor_general', 'name': 'Supervisor', 'firstSurname': 'General', 'email': 'supervisor.general@example.com', 'role': 'supervisor'},
             {'username': 'supervisor_delineante', 'name': 'Supervisor', 'firstSurname': 'Delineante', 'email': 'supervisor.delineante@example.com', 'role': 'supervisor'},
             {'username': 'supervisor_ingenieria', 'name': 'Supervisor', 'firstSurname': 'Ingenieria', 'email': 'supervisor.ingenieria@example.com', 'role': 'supervisor'},
@@ -76,8 +79,8 @@ def init_db_data_command():
             if not mongo.db.personas.find_one({"username": username}):
                 print(f"Creando usuario '{username}'...")
                 
-                # TODO: Revertir a generación de contraseña aleatoria para producción.
-                password = "password"
+                alphabet = string.ascii_letters + string.digits + string.punctuation
+                password = ''.join(secrets.choice(alphabet) for i in range(12))
                 
                 user = Persona(
                     username=username,
@@ -85,7 +88,10 @@ def init_db_data_command():
                     firstSurname=user_data_item['firstSurname'],
                     email=user_data_item['email'],
                     role=user_data_item['role'],
-                    password=password
+                    password=password,
+                    password_changed_at=datetime.utcnow(),
+                    two_factor_code=None,
+                    two_factor_code_expiration=None
                 )
                 
                 user_dict = user.__dict__

@@ -1,0 +1,10 @@
+Hola {{ user.username }},
+
+Tu código de verificación de dos factores es: {{ user.two_factor_code }}
+
+Este código expirará en 10 minutos.
+
+Si no solicitaste este código, puedes ignorar este correo electrónico.
+
+Saludos,
+El equipo de [TuApp]

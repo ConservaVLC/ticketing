@@ -1,7 +1,6 @@
 from flask_mail import Message
 from app import mail # Importa la instancia de Mail de tu app principal
 from flask import render_template, current_app # CAMBIO CLAVE: Importar url_for aquí también
-from threading import Thread
 import threading
 
 def send_email_async(app, msg):

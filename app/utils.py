@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from app import mongo
 from bson.objectid import ObjectId
+from flask import current_app
 
 def log_ticket_history(ticket_id, change_type, changed_by_user, details=""):
     """

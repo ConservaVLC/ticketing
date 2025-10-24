@@ -10,7 +10,8 @@ import logging
 from bson.objectid import ObjectId
 from bson.errors import InvalidId
 import pymongo
-from app.utils import log_ticket_history, send_notification_email # Importar funciones centralizadas
+from app.utils import log_ticket_history
+from app.email import send_notification_email # Importar funciones centralizadas
 
 logger = logging.getLogger(__name__)
 

@@ -9,6 +9,7 @@ from bson.objectid import ObjectId
 import pymongo
 import logging
 from app.utils import log_ticket_history
+from app.email import send_notification_email
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +171,14 @@ def assign_ticket(ticket_id):
             log_ticket_history(ticket_id, "Asignación de Operador", current_user, f"Ticket asignado a {operator_obj['username']}")
 
             # --- ENVÍO DE CORREO AL OPERADOR ASIGNADO ---
-            # send_notification_email(...)
+            send_notification_email(
+                subject='Ticket Asignado - [TuApp]',
+                recipients=[operator_obj['email']],
+                template='emails/ticket_assigned.html',
+                operator=operator_obj,
+                ticket=ticket,
+                supervisor=current_user
+            )
 
             flash(f"Ticket {ticket_id} asignado a {operator_obj['username']} y estado cambiado a \"{assigned_status['name']}\".", 'success')
             return redirect(url_for('admin_bp.list_tickets'))

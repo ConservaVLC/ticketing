@@ -3,16 +3,16 @@ from wtforms import TextAreaField, SelectField, SubmitField, StringField, DateFi
 from wtforms.validators import DataRequired, Length, Optional
 
 class TicketEditForm(FlaskForm):
-    description = TextAreaField('Descripción del Ticket', validators=[DataRequired(), Length(min=10, max=500)])
-    category = SelectField('Categoría', validators=[DataRequired()], choices=[])
-    status = SelectField('Estado del Ticket', validators=[DataRequired()], choices=[])
+    description = TextAreaField('Descripción del Ticket', validators=[DataRequired(message="Este campo es obligatorio"), Length(min=10, max=500)])
+    category = SelectField('Categoría', validators=[DataRequired(message="Este campo es obligatorio")], choices=[])
+    status = SelectField('Estado del Ticket', validators=[DataRequired(message="Este campo es obligatorio")], choices=[])
     supervisor = SelectField('Supervisor Asignado', validators=[Optional()], choices=[])
     operator = SelectField('Operador Asignado', validators=[Optional()], choices=[])
     observation = TextAreaField('Observación del Supervisor', validators=[Optional(), Length(max=1000)])
     submit = SubmitField('Actualizar Ticket', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
 class AssignTicketForm(FlaskForm):
-    operator = SelectField('Asignar a:', validators=[DataRequired()], choices=[])
+    operator = SelectField('Asignar a:', validators=[DataRequired(message="Este campo es obligatorio")], choices=[])
     submit = SubmitField('Asignar Ticket', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
 class TicketFilterForm(FlaskForm):

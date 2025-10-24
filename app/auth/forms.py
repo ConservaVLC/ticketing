@@ -28,21 +28,20 @@ def password_complexity_validator(form, field):
         raise ValidationError(mensaje_final)
 
 class RegistrationForm(FlaskForm):
-    username = StringField('Nombre de Usuario', validators=[DataRequired(), Length(min=4, max=50)])
-    name = StringField('Primer nombre', validators=[DataRequired(), Length(min=1, max=30)])
+    username = StringField('Nombre de Usuario', validators=[DataRequired(message="Este campo es obligatorio"), Length(min=4, max=50)])
+    name = StringField('Primer nombre', validators=[DataRequired(message="Este campo es obligatorio"), Length(min=1, max=30)])
     middleName = StringField('Segundo nombre', validators=[Optional(), Length(min=1, max=30)])
-    firstSurname = StringField('Primer apellido', validators=[DataRequired(), Length(min=1, max=30)])
+    firstSurname = StringField('Primer apellido', validators=[DataRequired(message="Este campo es obligatorio"), Length(min=1, max=30)])
     secondSurname = StringField('Segundo apellido', validators=[Optional(), Length(min=1, max=30)])
-    role = SelectField("Tipo de usuario", choices=[], validators=[DataRequired()])
-    email = StringField('Correo Electrónico', validators=[DataRequired(), Email()])
+    email = StringField('Correo Electrónico', validators=[DataRequired(message="Este campo es obligatorio"), Email()])
     password = PasswordField(
         "Contraseña",
         validators=[
-            DataRequired(),
+            DataRequired(message="Este campo es obligatorio"),
             password_complexity_validator,
         ],
     )
-    password2 = PasswordField('Repetir Contraseña', validators=[DataRequired(), EqualTo('password', message='Las contraseñas no coinciden.')])
+    password2 = PasswordField('Repetir Contraseña', validators=[DataRequired(message="Este campo es obligatorio"), EqualTo('password', message='Las contraseñas no coinciden.')])
     submit = SubmitField('Registrar usuario', render_kw={"class": "btn btn-primary confirm-submit-btn col-md-6"})
 
     def validate_username(self, username):
@@ -56,14 +55,14 @@ class RegistrationForm(FlaskForm):
             raise ValidationError('Este correo electrónico ya está registrado.')
 
 class LoginForm(FlaskForm):
-    username = StringField('Nombre de Usuario o Correo Electrónico', validators=[DataRequired()])
-    password = PasswordField('Contraseña', validators=[DataRequired()])
+    username = StringField('Nombre de Usuario o Correo Electrónico', validators=[DataRequired(message="Este campo es obligatorio")])
+    password = PasswordField('Contraseña', validators=[DataRequired(message="Este campo es obligatorio")])
     remember_me = BooleanField('Recordarme')
     submit = SubmitField('Iniciar Sesión')
 
 class Verify2FAForm(FlaskForm):
     code = StringField(
-        "Código de 6 dígitos", validators=[DataRequired(), Length(min=6, max=6)]
+        "Código de 6 dígitos", validators=[DataRequired(message="Este campo es obligatorio"), Length(min=6, max=6)]
     )
     trust_device = BooleanField(
         "Mantener sesión iniciada en este dispositivo (8 horas)"
@@ -71,7 +70,7 @@ class Verify2FAForm(FlaskForm):
     submit = SubmitField("Verificar")
 
 class RequestResetPasswordForm(FlaskForm):
-    email = StringField('Correo Electrónico', validators=[DataRequired(), Email()])
+    email = StringField('Correo Electrónico', validators=[DataRequired(message="Este campo es obligatorio"), Email()])
     submit = SubmitField('Solicitar Restablecimiento de Contraseña')
 
     def validate_email(self, email):
@@ -83,38 +82,38 @@ class ResetPasswordForm(FlaskForm):
     password = PasswordField(
         "Contraseña",
         validators=[
-            DataRequired(),
+            DataRequired(message="Este campo es obligatorio"),
             password_complexity_validator,
         ],
     )
-    password2 = PasswordField('Confirmar Nueva Contraseña', validators=[DataRequired(), EqualTo('password', message='Las contraseñas no coinciden.')])
+    password2 = PasswordField('Confirmar Nueva Contraseña', validators=[DataRequired(message="Este campo es obligatorio"), EqualTo('password', message='Las contraseñas no coinciden.')])
     submit = SubmitField('Restablecer Contraseña')
 
 class ProfileEditForm(FlaskForm):
-    name = StringField('Primer Nombre', validators=[DataRequired(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
+    name = StringField('Primer Nombre', validators=[DataRequired(message="Este campo es obligatorio"), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
     middleName = StringField('Segundo Nombre', validators=[Optional(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
-    firstSurname = StringField('Primer Apellido', validators=[DataRequired(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
+    firstSurname = StringField('Primer Apellido', validators=[DataRequired(message="Este campo es obligatorio"), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
     secondSurname = StringField('Segundo Apellido', validators=[Optional(), Length(max=100)], render_kw={'readonly': True, 'disabled': True})
     role = StringField('Rol', render_kw={'readonly': True, 'disabled': True})
 
 class ChangePasswordForm(FlaskForm):
-    old_password = PasswordField('Contraseña Actual', validators=[DataRequired()])
+    old_password = PasswordField('Contraseña Actual', validators=[DataRequired(message="Este campo es obligatorio")])
     new_password = PasswordField(
         "Contraseña",
         validators=[
-            DataRequired(),
+            DataRequired(message="Este campo es obligatorio"),
             password_complexity_validator,
         ],
     )
-    new_password2 = PasswordField('Repetir Nueva Contraseña', validators=[DataRequired(), EqualTo('new_password', message='Las contraseñas no coinciden.')])
+    new_password2 = PasswordField('Repetir Nueva Contraseña', validators=[DataRequired(message="Este campo es obligatorio"), EqualTo('new_password', message='Las contraseñas no coinciden.')])
     submit = SubmitField('Cambiar Contraseña', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
 class UserEditForm(FlaskForm):
-    username = StringField('Nombre de usuario', validators=[DataRequired(), Length(min=2, max=50)])
-    email = StringField('Correo electrónico', validators=[DataRequired(), Email()])
-    name = StringField('Primer Nombre', validators=[DataRequired(), Length(max=100)])
+    username = StringField('Nombre de usuario', validators=[DataRequired(message="Este campo es obligatorio"), Length(min=2, max=50)])
+    email = StringField('Correo electrónico', validators=[DataRequired(message="Este campo es obligatorio"), Email()])
+    name = StringField('Primer Nombre', validators=[DataRequired(message="Este campo es obligatorio"), Length(max=100)])
     middleName = StringField('Segundo Nombre', validators=[Optional(), Length(max=100)])
-    firstSurname = StringField('Primer Apellido', validators=[DataRequired(), Length(max=100)])
+    firstSurname = StringField('Primer Apellido', validators=[DataRequired(message="Este campo es obligatorio"), Length(max=100)])
     secondSurname = StringField('Segundo Apellido', validators=[Optional(), Length(max=100)])
     password = PasswordField(
         "Contraseña",
@@ -124,7 +123,7 @@ class UserEditForm(FlaskForm):
         ],
     )
     confirm_password = PasswordField('Confirmar nueva contraseña', validators=[Optional(), EqualTo('password', message='Las contraseñas no coinciden.')])
-    role = SelectField("Tipo de usuario", choices=(), validators=[DataRequired()])
+    role = SelectField("Tipo de usuario", choices=(), validators=[DataRequired(message="Este campo es obligatorio")])
     submit = SubmitField('Actualizar usuario', render_kw={"class": "btn btn-primary confirm-submit-btn col-md-6"})
 
     def __init__(self, original_username=None, original_email=None, *args, **kwargs):

@@ -10,7 +10,7 @@ class EmptyForm(FlaskForm):
     submit = SubmitField('Submit')
 
 class CategoryForm(FlaskForm):
-    name = StringField('Nombre de la categoría', validators=[DataRequired(), Length(min=2, max=30, message='La categoría debe tener entre 2 y 30 caracteres')])
+    name = StringField('Nombre de la categoría', validators=[DataRequired(message="Este campo es obligatorio"), Length(min=2, max=30, message='La categoría debe tener entre 2 y 30 caracteres')])
     submit = SubmitField('Guardar Categoría', render_kw={"class": "btn btn-primary confirm-submit-btn"})
 
     def __init__(self, original_value=None, *args, **kwargs):
